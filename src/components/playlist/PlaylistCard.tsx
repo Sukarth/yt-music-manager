@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { View, StyleSheet, Image } from 'react-native';
 import { Card, Text, ProgressBar, IconButton, useTheme } from 'react-native-paper';
 import { Playlist } from '../../types';
 import { formatFileSize, formatDate } from '../../utils/formatters';

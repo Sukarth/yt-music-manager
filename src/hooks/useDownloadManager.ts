@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAppContext } from '../store/AppContext';
-import { Track, Playlist } from '../types';
+import { Track } from '../types';
 import { downloadService } from '../services/downloadService';
 
 export const useDownloadManager = () => {

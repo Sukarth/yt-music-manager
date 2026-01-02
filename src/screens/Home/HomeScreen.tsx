@@ -17,7 +17,6 @@ import { useAppContext } from '../../store/AppContext';
 import { usePlaylistManager } from '../../hooks/usePlaylistManager';
 import { useDownloadManager } from '../../hooks/useDownloadManager';
 import PlaylistCard from '../../components/playlist/PlaylistCard';
-import LoadingSpinner from '../../components/common/LoadingSpinner';
 import { RootStackParamList, Playlist } from '../../types';
 
 type HomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'MainTabs'>;
@@ -72,7 +71,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       } else {
         Alert.alert('Up to Date', 'This playlist is already up to date.');
       }
-    } catch (error) {
+    } catch {
       Alert.alert('Sync Error', 'Failed to sync playlist. Please try again.');
     }
   };
@@ -90,7 +89,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       setDeleteDialogVisible(false);
       setPlaylistToDelete(null);
       setDeleteFiles(false);
-    } catch (error) {
+    } catch {
       Alert.alert('Delete Error', 'Failed to delete playlist. Please try again.');
     }
   };

@@ -5,7 +5,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { usePlaylistManager } from '../../hooks/usePlaylistManager';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
-import ErrorMessage from '../../components/common/ErrorMessage';
 import { RootStackParamList } from '../../types';
 import { extractPlaylistId } from '../../utils/formatters';
 

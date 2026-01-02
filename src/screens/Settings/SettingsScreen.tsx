@@ -1,16 +1,6 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, Alert } from 'react-native';
-import {
-  List,
-  Switch,
-  Text,
-  Button,
-  Portal,
-  Dialog,
-  RadioButton,
-  Divider,
-  useTheme,
-} from 'react-native-paper';
+import { StyleSheet, ScrollView, Alert } from 'react-native';
+import { List, Switch, Button, Portal, Dialog, RadioButton, Divider } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppContext } from '../../store/AppContext';
 import { authService } from '../../services/authService';
@@ -24,7 +14,6 @@ const getDocumentDirectory = (): string => {
 
 const SettingsScreen: React.FC = () => {
   const { state, dispatch } = useAppContext();
-  const theme = useTheme();
 
   const [qualityDialogVisible, setQualityDialogVisible] = useState(false);
   const [intervalDialogVisible, setIntervalDialogVisible] = useState(false);
@@ -78,7 +67,7 @@ const SettingsScreen: React.FC = () => {
       const auth = await authService.signInWithGoogle();
       dispatch({ type: 'SET_AUTH', payload: auth });
       Alert.alert('Success', 'Signed in successfully!');
-    } catch (error) {
+    } catch {
       Alert.alert('Error', 'Failed to sign in. Please try again.');
     }
   };
@@ -114,7 +103,7 @@ const SettingsScreen: React.FC = () => {
             }
             setStorageUsed(0);
             Alert.alert('Success', 'Cache cleared successfully!');
-          } catch (error) {
+          } catch {
             Alert.alert('Error', 'Failed to clear cache.');
           }
         },

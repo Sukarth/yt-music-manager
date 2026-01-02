@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { View, StyleSheet, FlatList, Alert } from 'react-native';
 import {
   Text,
   Button,
-  FAB,
   Searchbar,
   Menu,
   IconButton,
@@ -16,7 +15,6 @@ import { RouteProp } from '@react-navigation/native';
 import { useAppContext } from '../../store/AppContext';
 import { useDownloadManager } from '../../hooks/useDownloadManager';
 import TrackItem from '../../components/playlist/TrackItem';
-import LoadingSpinner from '../../components/common/LoadingSpinner';
 import { RootStackParamList, Track } from '../../types';
 import { formatFileSize, formatDate } from '../../utils/formatters';
 
@@ -35,7 +33,7 @@ interface PlaylistDetailScreenProps {
 const PlaylistDetailScreen: React.FC<PlaylistDetailScreenProps> = ({ navigation, route }) => {
   const { playlistId } = route.params;
   const { state } = useAppContext();
-  const { downloadTrack, downloadPlaylist, cancelDownload, activeDownloads } = useDownloadManager();
+  const { downloadTrack, downloadPlaylist, cancelDownload } = useDownloadManager();
   const theme = useTheme();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -78,7 +76,7 @@ const PlaylistDetailScreen: React.FC<PlaylistDetailScreenProps> = ({ navigation,
           try {
             await downloadPlaylist(playlistId);
             Alert.alert('Success', 'All tracks downloaded successfully!');
-          } catch (error) {
+          } catch {
             Alert.alert('Error', 'Failed to download some tracks.');
           } finally {
             setIsDownloading(false);
@@ -91,7 +89,7 @@ const PlaylistDetailScreen: React.FC<PlaylistDetailScreenProps> = ({ navigation,
   const handleDownloadTrack = async (track: Track) => {
     try {
       await downloadTrack(track);
-    } catch (error) {
+    } catch {
       Alert.alert('Download Error', `Failed to download "${track.title}". Please try again.`);
     }
   };
@@ -99,7 +97,7 @@ const PlaylistDetailScreen: React.FC<PlaylistDetailScreenProps> = ({ navigation,
   const handleCancelDownload = async (trackId: string) => {
     try {
       await cancelDownload(trackId);
-    } catch (error) {
+    } catch {
       Alert.alert('Error', 'Failed to cancel download.');
     }
   };

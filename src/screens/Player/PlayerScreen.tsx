@@ -121,7 +121,7 @@ const PlayerScreen: React.FC<PlayerScreenProps> = ({ route, navigation }) => {
     }
   };
 
-  const handleSeek = async (value: number) => {
+  const _handleSeek = async (value: number) => {
     if (!sound) return;
     await sound.setPositionAsync(value * 1000);
   };

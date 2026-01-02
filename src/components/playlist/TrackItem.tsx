@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { View, StyleSheet, Image } from 'react-native';
 import { List, Text, ProgressBar, IconButton, useTheme } from 'react-native-paper';
 import { Track } from '../../types';
 import { formatDuration, formatFileSize } from '../../utils/formatters';
@@ -53,7 +53,7 @@ const TrackItem: React.FC<TrackItemProps> = ({ track, onPress, onDownload, onCan
             <List.Icon {...props} icon="music-note" />
           )
         }
-        right={props => (
+        right={() => (
           <View style={styles.rightContent}>
             {track.downloadStatus === 'completed' && track.fileSize > 0 && (
               <Text variant="bodySmall" style={styles.fileSize}>
