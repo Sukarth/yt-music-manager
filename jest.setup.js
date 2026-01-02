@@ -32,3 +32,11 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
   setItem: jest.fn(),
   removeItem: jest.fn(),
 }));
+
+// Mock @expo/vector-icons to avoid expo-asset dependency
+jest.mock('@expo/vector-icons', () => {
+  const React = require('react');
+  return {
+    Ionicons: (props) => React.createElement('Ionicons', props),
+  };
+});
