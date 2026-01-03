@@ -1,6 +1,9 @@
 import axios from 'axios';
 import { YOUTUBE_API_BASE_URL } from '../constants';
 
+// Default API key for the app - allows basic functionality without user setup
+const DEFAULT_API_KEY = 'AIzaSyC8UYZpvA2eknNex0Pjid0_eTLJoDu6los';
+
 export interface YouTubePlaylistInfo {
   id: string;
   title: string;
@@ -18,11 +21,11 @@ export interface YouTubeVideoInfo {
 }
 
 export class YouTubeApiService {
-  private apiKey: string | null = null;
+  private apiKey: string = DEFAULT_API_KEY;
   private accessToken: string | null = null;
 
   setApiKey(key: string) {
-    this.apiKey = key;
+    this.apiKey = key || DEFAULT_API_KEY;
   }
 
   setAccessToken(token: string) {
