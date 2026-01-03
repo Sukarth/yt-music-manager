@@ -2,7 +2,7 @@ import * as AuthSession from 'expo-auth-session';
 import { AuthState } from '../types';
 import { saveAuth, clearAuth } from '../utils/storage';
 
-const GOOGLE_CLIENT_ID = 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com';
+const GOOGLE_CLIENT_ID = '16949272129-9nsr5j9cfsit7ksugpgbu8m08r8tkj7o.apps.googleusercontent.com';
 
 const discovery = {
   authorizationEndpoint: 'https://accounts.google.com/o/oauth2/v2/auth',
