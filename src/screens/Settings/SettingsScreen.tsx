@@ -372,9 +372,15 @@ const SettingsScreen: React.FC = () => {
         <Dialog visible={apiKeyDialogVisible} onDismiss={() => setApiKeyDialogVisible(false)}>
           <Dialog.Title>YouTube API Key</Dialog.Title>
           <Dialog.Content>
-            <Text variant="bodyMedium" style={{ marginBottom: 16 }}>
-              To fetch playlists, you need a YouTube Data API v3 key. Get one from the Google Cloud
-              Console.
+            <Text variant="bodyMedium" style={{ marginBottom: 8 }}>
+              To fetch playlists from YouTube, you need a YouTube Data API v3 key.
+            </Text>
+            <Text variant="bodySmall" style={{ marginBottom: 16, opacity: 0.7 }}>
+              1. Go to Google Cloud Console (console.cloud.google.com){'\n'}
+              2. Create a new project or select existing{'\n'}
+              3. Enable "YouTube Data API v3"{'\n'}
+              4. Create credentials → API Key{'\n'}
+              5. Copy and paste the key below
             </Text>
             <TextInput
               label="API Key"
