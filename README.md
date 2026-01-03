@@ -5,6 +5,7 @@ A production-ready React Native mobile application for managing and downloading 
 ## Features
 
 ### Core Functionality
+
 - **Playlist Management**: Add, remove, and organize YouTube Music playlists
 - **Smart Download System**: Download playlists in MP3 format with configurable quality
 - **Sync Mechanism**: Keep playlists up-to-date with automatic sync
@@ -15,11 +16,13 @@ A production-ready React Native mobile application for managing and downloading 
 - **M3U Export**: Generate M3U playlists for external players
 
 ### Authentication
+
 - Google OAuth Sign-In for private playlists
 - Public playlist support without authentication
 - Secure token storage with encryption
 
 ### Settings & Customization
+
 - Audio quality selection (128-320 kbps)
 - Concurrent download configuration
 - Auto-sync interval customization
@@ -40,7 +43,7 @@ A production-ready React Native mobile application for managing and downloading 
 
 ## Prerequisites
 
-- Node.js 18+ 
+- Node.js 18+
 - npm or yarn
 - Expo CLI
 - iOS Simulator (macOS) or Android Emulator
@@ -49,17 +52,20 @@ A production-ready React Native mobile application for managing and downloading 
 ## Installation
 
 1. Clone the repository:
+
 ```bash
 git clone <repository-url>
 cd yt-music-manager
 ```
 
 2. Install dependencies:
+
 ```bash
 npm install
 ```
 
 3. Configure environment (optional):
+
 ```bash
 # Update src/services/authService.ts with your Google OAuth Client ID
 GOOGLE_CLIENT_ID='your-google-client-id'
@@ -70,11 +76,13 @@ GOOGLE_CLIENT_ID='your-google-client-id'
 ### Running the App
 
 Start the development server:
+
 ```bash
 npm start
 ```
 
 Run on specific platforms:
+
 ```bash
 npm run android  # Android
 npm run ios      # iOS (macOS only)
@@ -84,17 +92,20 @@ npm run web      # Web (limited functionality)
 ### Code Quality
 
 Run linter:
+
 ```bash
 npm run lint
 npm run lint:fix  # Auto-fix issues
 ```
 
 Format code:
+
 ```bash
 npm run format
 ```
 
 Type checking:
+
 ```bash
 npm run typecheck
 ```
@@ -102,16 +113,19 @@ npm run typecheck
 ### Testing
 
 Run tests:
+
 ```bash
 npm test
 ```
 
 Run tests with coverage:
+
 ```bash
 npm run test:coverage
 ```
 
 Watch mode:
+
 ```bash
 npm run test:watch
 ```
@@ -158,21 +172,25 @@ yt-music-manager/
 ### Android (APK/AAB)
 
 1. Install EAS CLI:
+
 ```bash
 npm install -g eas-cli
 ```
 
 2. Configure EAS:
+
 ```bash
 eas build:configure
 ```
 
 3. Build APK:
+
 ```bash
 eas build --platform android --profile preview
 ```
 
 4. Build for Play Store:
+
 ```bash
 eas build --platform android --profile production
 ```
@@ -182,6 +200,7 @@ eas build --platform android --profile production
 1. Configure Apple Developer account in EAS
 
 2. Build for iOS:
+
 ```bash
 eas build --platform ios --profile production
 ```
@@ -189,6 +208,7 @@ eas build --platform ios --profile production
 ### Build Profiles
 
 Build profiles are configured in `eas.json`:
+
 - **development**: Development builds with debugging
 - **preview**: APK builds for testing
 - **production**: Optimized production builds
@@ -198,6 +218,7 @@ Build profiles are configured in `eas.json`:
 ### App Configuration (app.json)
 
 Key settings in `app.json`:
+
 - Bundle identifiers
 - App name and version
 - Permissions
@@ -207,6 +228,7 @@ Key settings in `app.json`:
 ### Environment Variables
 
 For production, set the following:
+
 - `GOOGLE_CLIENT_ID`: Google OAuth client ID
 - YouTube API key (if needed for public playlists)
 
@@ -215,6 +237,7 @@ For production, set the following:
 ### YouTube API
 
 The app uses YouTube Data API v3 for:
+
 - Fetching playlist information
 - Retrieving video details
 - Syncing playlist changes
@@ -249,21 +272,25 @@ The app uses YouTube Data API v3 for:
 ### Common Issues
 
 **Build Failures**:
+
 - Clear cache: `expo start -c`
 - Reinstall dependencies: `rm -rf node_modules && npm install`
 - Reset Metro bundler: `npx react-native start --reset-cache`
 
 **iOS Issues**:
+
 - Run `pod install` in `ios/` directory
 - Clean build: `cd ios && xcodebuild clean`
 
 **Android Issues**:
+
 - Clean Gradle: `cd android && ./gradlew clean`
 - Clear build cache: `cd android && ./gradlew cleanBuildCache`
 
 ### Debug Mode
 
 Enable React Native debugging:
+
 1. Shake device (physical) or Cmd+D (iOS) / Cmd+M (Android)
 2. Select "Debug" from menu
 3. Open Chrome DevTools
@@ -271,21 +298,25 @@ Enable React Native debugging:
 ## Testing Strategy
 
 ### Unit Tests
+
 - Utility functions
 - Service logic
 - State management
 
 ### Component Tests
+
 - UI component rendering
 - User interactions
 - Props validation
 
 ### Integration Tests
+
 - API integration
 - Navigation flows
 - Data persistence
 
 ### E2E Tests (Optional)
+
 - Complete user workflows
 - Critical paths testing
 - Cross-platform validation
@@ -330,6 +361,7 @@ This project is licensed under the MIT License.
 ## Support
 
 For issues and questions:
+
 - Open an issue on GitHub
 - Check existing documentation
 - Review troubleshooting section
@@ -337,6 +369,7 @@ For issues and questions:
 ## Roadmap
 
 ### Future Enhancements
+
 - [ ] Offline mode improvements
 - [ ] Playlist sharing
 - [ ] Social features

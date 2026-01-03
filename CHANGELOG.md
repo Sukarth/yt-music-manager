@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.0] - 2026-01-02
 
 ### Added
+
 - Initial release of YT Music Manager mobile app
 - Playlist management (add, remove, list)
 - YouTube Music playlist import via URL or ID
@@ -51,6 +52,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - CONTRIBUTING guidelines
 
 ### Technical Stack
+
 - React Native with Expo (Managed Workflow)
 - TypeScript for type safety
 - React Navigation for routing
@@ -63,12 +65,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Jest and React Native Testing Library for testing
 
 ### Known Limitations
+
 - Requires backend service for actual audio downloads (yt-dlp integration)
 - Background sync requires app to remain installed
 - iOS background limitations apply
 - Large playlists may take time to sync
 
 ### Security
+
 - OAuth tokens encrypted with Expo SecureStore
 - No sensitive data in logs
 - Input validation and sanitization

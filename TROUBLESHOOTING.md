@@ -3,6 +3,7 @@
 This guide helps you resolve common issues when developing or using YT Music Manager.
 
 ## Table of Contents
+
 - [Installation Issues](#installation-issues)
 - [Build Issues](#build-issues)
 - [Runtime Issues](#runtime-issues)
@@ -17,11 +18,13 @@ This guide helps you resolve common issues when developing or using YT Music Man
 ### npm install fails
 
 **Error**: Dependencies not installing
+
 ```bash
 npm ERR! ERESOLVE unable to resolve dependency tree
 ```
 
 **Solution**:
+
 ```bash
 # Clear npm cache
 npm cache clean --force
@@ -38,6 +41,7 @@ npm install --legacy-peer-deps
 **Error**: `expo: command not found`
 
 **Solution**:
+
 ```bash
 # Install Expo CLI globally
 npm install -g expo-cli
@@ -51,11 +55,13 @@ npx expo start
 ### Android Build Fails
 
 **Error**: Gradle build failure
+
 ```
 Task :app:bundleReleaseJsAndAssets FAILED
 ```
 
 **Solution 1**: Clear Gradle cache
+
 ```bash
 cd android
 ./gradlew clean
@@ -63,11 +69,13 @@ cd ..
 ```
 
 **Solution 2**: Clear Metro bundler cache
+
 ```bash
 expo start -c
 ```
 
 **Solution 3**: Check Java version
+
 ```bash
 # Ensure Java 11 or 17 is installed
 java -version
@@ -76,11 +84,13 @@ java -version
 ### iOS Build Fails
 
 **Error**: Pod install failure
+
 ```
 [!] CocoaPods could not find compatible versions
 ```
 
 **Solution 1**: Update CocoaPods
+
 ```bash
 cd ios
 pod deintegrate
@@ -89,6 +99,7 @@ cd ..
 ```
 
 **Solution 2**: Clear derived data
+
 ```bash
 rm -rf ~/Library/Developer/Xcode/DerivedData
 ```
@@ -98,6 +109,7 @@ rm -rf ~/Library/Developer/Xcode/DerivedData
 **Error**: Build fails on EAS servers
 
 **Solution 1**: Check eas.json configuration
+
 ```json
 {
   "build": {
@@ -112,6 +124,7 @@ rm -rf ~/Library/Developer/Xcode/DerivedData
 ```
 
 **Solution 2**: Clear EAS cache
+
 ```bash
 eas build --platform android --clear-cache
 ```
@@ -123,7 +136,9 @@ eas build --platform android --clear-cache
 **Issue**: App crashes immediately after launch
 
 **Debug Steps**:
+
 1. Check error logs:
+
 ```bash
 # iOS
 npx react-native log-ios
@@ -133,16 +148,19 @@ npx react-native log-android
 ```
 
 2. Verify all dependencies are installed:
+
 ```bash
 npm install
 ```
 
 3. Clear Metro cache:
+
 ```bash
 expo start -c
 ```
 
 4. Check for syntax errors:
+
 ```bash
 npm run typecheck
 npm run lint
@@ -153,6 +171,7 @@ npm run lint
 **Issue**: App shows white/blank screen
 
 **Solutions**:
+
 1. Check for JavaScript errors in console
 2. Verify App.tsx is properly exported
 3. Check navigation configuration
@@ -163,10 +182,12 @@ npm run lint
 **Error**: API requests timeout or fail
 
 **Solutions**:
+
 1. Check network connectivity
 2. Verify API URLs are correct
 3. Check for CORS issues (web only)
 4. Enable network debugging:
+
 ```typescript
 // In App.tsx
 if (__DEV__) {
@@ -181,6 +202,7 @@ if (__DEV__) {
 **Error**: OAuth flow doesn't complete
 
 **Solutions**:
+
 1. Verify Google Client ID is correct
 2. Check redirect URIs in Google Console:
    - Add: `exp://localhost:19000`
@@ -193,6 +215,7 @@ if (__DEV__) {
 **Issue**: "Token expired" errors
 
 **Solution**:
+
 ```typescript
 // Implement token refresh
 if (auth.tokenExpiry < Date.now()) {
@@ -206,6 +229,7 @@ if (auth.tokenExpiry < Date.now()) {
 **Error**: Cannot save/retrieve tokens
 
 **Solutions**:
+
 1. Check device supports SecureStore
 2. Verify app has keychain access (iOS)
 3. Clear and re-authenticate
@@ -218,10 +242,12 @@ if (auth.tokenExpiry < Date.now()) {
 **Issue**: Tracks fail to download
 
 **Debug Steps**:
+
 1. Check network connectivity
 2. Verify download URLs are valid
 3. Check storage permissions (Android)
 4. Monitor file system errors:
+
 ```typescript
 try {
   await downloadTrack(track);
@@ -235,6 +261,7 @@ try {
 **Issue**: Downloads never complete
 
 **Solutions**:
+
 1. Check concurrent download limit
 2. Verify no memory leaks
 3. Cancel and retry download
@@ -245,14 +272,17 @@ try {
 **Issue**: Downloaded file cannot be played
 
 **Solutions**:
+
 1. Verify file path is correct
 2. Check file actually exists:
+
 ```typescript
 const fileInfo = await FileSystem.getInfoAsync(filePath);
 if (!fileInfo.exists) {
   console.error('File not found:', filePath);
 }
 ```
+
 3. Check file permissions
 4. Verify download completed successfully
 
@@ -263,10 +293,12 @@ if (!fileInfo.exists) {
 **Issue**: Track doesn't play or no sound
 
 **Solutions**:
+
 1. Check audio file exists
 2. Verify audio permissions
 3. Check device volume
 4. Enable audio mode:
+
 ```typescript
 await Audio.setAudioModeAsync({
   playsInSilentModeIOS: true,
@@ -279,6 +311,7 @@ await Audio.setAudioModeAsync({
 **Issue**: Audio playback is choppy
 
 **Solutions**:
+
 1. Close other apps
 2. Check file quality/size
 3. Optimize buffer settings
@@ -289,8 +322,10 @@ await Audio.setAudioModeAsync({
 **Issue**: Audio stops when app is backgrounded
 
 **iOS Solutions**:
+
 1. Verify Background Modes capability
 2. Check Info.plist:
+
 ```xml
 <key>UIBackgroundModes</key>
 <array>
@@ -299,6 +334,7 @@ await Audio.setAudioModeAsync({
 ```
 
 **Android Solutions**:
+
 1. Check foreground service permission
 2. Implement media session
 
@@ -309,11 +345,14 @@ await Audio.setAudioModeAsync({
 **Issue**: "Insufficient storage" errors
 
 **Solutions**:
+
 1. Check available storage:
+
 ```typescript
 const info = await FileSystem.getFreeDiskStorageAsync();
 console.log('Free space:', info);
 ```
+
 2. Implement storage cleanup
 3. Delete unused playlists
 4. Reduce audio quality
@@ -323,13 +362,13 @@ console.log('Free space:', info);
 **Issue**: Permission denied errors
 
 **Android Solutions**:
+
 1. Request storage permission:
+
 ```typescript
 import * as Permissions from 'expo-permissions';
 
-const { status } = await Permissions.askAsync(
-  Permissions.MEDIA_LIBRARY
-);
+const { status } = await Permissions.askAsync(Permissions.MEDIA_LIBRARY);
 ```
 
 2. Check AndroidManifest.xml permissions
@@ -340,6 +379,7 @@ const { status } = await Permissions.askAsync(
 **Issue**: Storage usage shows incorrect values
 
 **Solution**:
+
 ```typescript
 // Recalculate storage
 const calculateStorage = async () => {
@@ -359,6 +399,7 @@ const calculateStorage = async () => {
 **Issue**: App takes long to start
 
 **Solutions**:
+
 1. Optimize initial data loading
 2. Implement lazy loading
 3. Reduce bundle size
@@ -369,7 +410,9 @@ const calculateStorage = async () => {
 **Issue**: List scrolling is laggy
 
 **Solutions**:
+
 1. Use FlatList optimization:
+
 ```typescript
 <FlatList
   data={items}
@@ -389,7 +432,9 @@ const calculateStorage = async () => {
 **Issue**: App uses too much memory
 
 **Solutions**:
+
 1. Profile memory usage:
+
 ```bash
 # iOS
 xcrun xctrace record --device <device-id> --template 'Memory'
@@ -407,6 +452,7 @@ adb shell dumpsys meminfo com.ytmusicmanager.app
 **Issue**: App drains battery quickly
 
 **Solutions**:
+
 1. Optimize background tasks
 2. Reduce polling frequency
 3. Implement efficient sync
@@ -419,7 +465,9 @@ adb shell dumpsys meminfo com.ytmusicmanager.app
 **Issue**: Jest tests failing
 
 **Solutions**:
+
 1. Update test mocks:
+
 ```javascript
 // jest.setup.js
 jest.mock('expo-av', () => ({
@@ -430,6 +478,7 @@ jest.mock('expo-av', () => ({
 ```
 
 2. Clear Jest cache:
+
 ```bash
 jest --clearCache
 npm test
@@ -437,6 +486,7 @@ npm test
 
 3. Check test environment
 4. Update snapshots if needed:
+
 ```bash
 npm test -- -u
 ```
@@ -446,7 +496,9 @@ npm test -- -u
 **Issue**: Test coverage < 70%
 
 **Solutions**:
+
 1. Identify uncovered code:
+
 ```bash
 npm run test:coverage -- --verbose
 ```
@@ -460,6 +512,7 @@ npm run test:coverage -- --verbose
 ### iOS Issues
 
 **Face ID/Touch ID Fails**:
+
 ```typescript
 // Add to Info.plist
 <key>NSFaceIDUsageDescription</key>
@@ -467,6 +520,7 @@ npm run test:coverage -- --verbose
 ```
 
 **App Store Rejection**:
+
 - Add privacy policy URL
 - Provide demo account
 - Fix UI issues
@@ -475,6 +529,7 @@ npm run test:coverage -- --verbose
 ### Android Issues
 
 **Back Button Doesn't Work**:
+
 ```typescript
 import { BackHandler } from 'react-native';
 
@@ -490,6 +545,7 @@ useEffect(() => {
 ```
 
 **Notification Channel Required**:
+
 ```typescript
 // Create notification channel for Android 8.0+
 await Notifications.setNotificationChannelAsync('default', {
@@ -549,6 +605,7 @@ Systrace.endEvent();
 ### Creating an Issue
 
 Include:
+
 - Clear description of problem
 - Steps to reproduce
 - Expected vs actual behavior
