@@ -40,10 +40,10 @@
       "favicon": "./assets/favicon.png"
     },
     "extra": {
-  "eas": {
-    "projectId": "0315208a-eac4-4e5d-a9e1-e740f414d0da"
-  }
-    }
+      "eas": {
+         "projectId": "0315208a-eac4-4e5d-a9e1-e740f414d0da"
+      }
+    },
     "plugins": [
       "expo-av",
       "expo-file-system",
