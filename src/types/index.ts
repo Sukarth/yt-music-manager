@@ -40,7 +40,6 @@ export interface AppSettings {
   autoSyncEnabled: boolean;
   storageCleanupEnabled: boolean;
   theme: 'light' | 'dark' | 'auto';
-  youtubeApiKey: string | null;
 }
 
 export interface AuthState {

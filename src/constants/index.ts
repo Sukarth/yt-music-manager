@@ -6,7 +6,6 @@ export const DEFAULT_SETTINGS = {
   autoSyncEnabled: true,
   storageCleanupEnabled: false,
   theme: 'auto' as const,
-  youtubeApiKey: null,
 };
 
 export const STORAGE_KEYS = {

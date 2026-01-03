@@ -25,11 +25,6 @@ export const usePlaylistManager = () => {
         throw new Error('Playlist already exists');
       }
 
-      // Set API key if available
-      if (state.settings.youtubeApiKey) {
-        youtubeApi.setApiKey(state.settings.youtubeApiKey);
-      }
-
       if (state.auth.accessToken) {
         youtubeApi.setAccessToken(state.auth.accessToken);
       }
@@ -127,11 +122,6 @@ export const usePlaylistManager = () => {
           type: 'UPDATE_PLAYLIST',
           payload: { ...playlist, syncStatus: 'syncing' },
         });
-      }
-
-      // Set API key if available
-      if (state.settings.youtubeApiKey) {
-        youtubeApi.setApiKey(state.settings.youtubeApiKey);
       }
 
       if (state.auth.accessToken) {
