@@ -1,6 +1,16 @@
 import React, { useState } from 'react';
 import { StyleSheet, ScrollView, Alert } from 'react-native';
-import { List, Switch, Button, Portal, Dialog, RadioButton, Divider } from 'react-native-paper';
+import {
+  List,
+  Switch,
+  Button,
+  Portal,
+  Dialog,
+  RadioButton,
+  Divider,
+  TextInput,
+  Text,
+} from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppContext } from '../../store/AppContext';
 import { authService } from '../../services/authService';
@@ -18,11 +28,13 @@ const SettingsScreen: React.FC = () => {
   const [qualityDialogVisible, setQualityDialogVisible] = useState(false);
   const [intervalDialogVisible, setIntervalDialogVisible] = useState(false);
   const [concurrentDialogVisible, setConcurrentDialogVisible] = useState(false);
+  const [apiKeyDialogVisible, setApiKeyDialogVisible] = useState(false);
   const [selectedQuality, setSelectedQuality] = useState(state.settings.audioQuality);
   const [selectedInterval, setSelectedInterval] = useState(state.settings.autoSyncInterval);
   const [selectedConcurrent, setSelectedConcurrent] = useState(
     state.settings.maxConcurrentDownloads
   );
+  const [apiKeyInput, setApiKeyInput] = useState(state.settings.youtubeApiKey || '');
   const [storageUsed, setStorageUsed] = useState<number | null>(null);
 
   React.useEffect(() => {
@@ -135,6 +147,15 @@ const SettingsScreen: React.FC = () => {
     setConcurrentDialogVisible(false);
   };
 
+  const saveApiKey = () => {
+    dispatch({
+      type: 'SET_SETTINGS',
+      payload: { ...state.settings, youtubeApiKey: apiKeyInput.trim() || null },
+    });
+    setApiKeyDialogVisible(false);
+    Alert.alert('Success', 'YouTube API key saved successfully!');
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView>
@@ -167,6 +188,26 @@ const SettingsScreen: React.FC = () => {
               />
             </>
           )}
+        </List.Section>
+
+        <Divider />
+
+        <List.Section>
+          <List.Subheader>API Configuration</List.Subheader>
+          <List.Item
+            title="YouTube API Key"
+            description={
+              state.settings.youtubeApiKey
+                ? `Configured: ${state.settings.youtubeApiKey.substring(0, 10)}...`
+                : 'Not configured - Required for playlist fetching'
+            }
+            left={props => <List.Icon {...props} icon="key" />}
+            right={props => <List.Icon {...props} icon="chevron-right" />}
+            onPress={() => {
+              setApiKeyInput(state.settings.youtubeApiKey || '');
+              setApiKeyDialogVisible(true);
+            }}
+          />
         </List.Section>
 
         <Divider />
@@ -325,6 +366,29 @@ const SettingsScreen: React.FC = () => {
           <Dialog.Actions>
             <Button onPress={() => setConcurrentDialogVisible(false)}>Cancel</Button>
             <Button onPress={saveConcurrent}>Save</Button>
+          </Dialog.Actions>
+        </Dialog>
+
+        <Dialog visible={apiKeyDialogVisible} onDismiss={() => setApiKeyDialogVisible(false)}>
+          <Dialog.Title>YouTube API Key</Dialog.Title>
+          <Dialog.Content>
+            <Text variant="bodyMedium" style={{ marginBottom: 16 }}>
+              To fetch playlists, you need a YouTube Data API v3 key. Get one from the Google Cloud
+              Console.
+            </Text>
+            <TextInput
+              label="API Key"
+              value={apiKeyInput}
+              onChangeText={setApiKeyInput}
+              mode="outlined"
+              placeholder="AIzaSy..."
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+          </Dialog.Content>
+          <Dialog.Actions>
+            <Button onPress={() => setApiKeyDialogVisible(false)}>Cancel</Button>
+            <Button onPress={saveApiKey}>Save</Button>
           </Dialog.Actions>
         </Dialog>
       </Portal>

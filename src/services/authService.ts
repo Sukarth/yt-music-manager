@@ -17,26 +17,24 @@ export class AuthService {
         scheme: 'ytmusicmanager',
       });
 
-      const [request, , promptAsync] = AuthSession.useAuthRequest(
-        {
-          clientId: GOOGLE_CLIENT_ID,
-          scopes: ['https://www.googleapis.com/auth/youtube.readonly'],
-          redirectUri,
-        },
-        discovery
-      );
+      // Build the authorization URL manually to avoid using hooks
+      const authUrl = await this.buildAuthorizationUrl(redirectUri);
 
-      if (!request) {
-        throw new Error('Failed to create auth request');
-      }
-
-      const result = await promptAsync();
+      // Use promptAsync directly without hooks
+      const result = await AuthSession.startAsync({
+        authUrl,
+        returnUrl: redirectUri,
+      });
 
       if (result.type !== 'success') {
         throw new Error('Authentication failed');
       }
 
       const { code } = result.params;
+
+      if (!code) {
+        throw new Error('No authorization code received');
+      }
 
       const tokenResponse = await this.exchangeCodeForToken(code, redirectUri);
 
@@ -56,6 +54,19 @@ export class AuthService {
       console.error('Error signing in with Google:', error);
       throw new Error('Failed to sign in with Google');
     }
+  }
+
+  private async buildAuthorizationUrl(redirectUri: string): Promise<string> {
+    const params = new URLSearchParams({
+      client_id: GOOGLE_CLIENT_ID,
+      redirect_uri: redirectUri,
+      response_type: 'code',
+      scope: 'https://www.googleapis.com/auth/youtube.readonly',
+      access_type: 'offline',
+      prompt: 'consent',
+    });
+
+    return `${discovery.authorizationEndpoint}?${params.toString()}`;
   }
 
   private async exchangeCodeForToken(
