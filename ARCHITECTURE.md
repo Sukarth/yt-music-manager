@@ -7,18 +7,21 @@ YT Music Manager is a React Native mobile application built with Expo that enabl
 ## Architecture Principles
 
 ### 1. Component-Based Architecture
+
 - Modular, reusable components
 - Clear separation of concerns
 - Single responsibility principle
 - Props-based communication
 
 ### 2. State Management
+
 - Context API for global state
 - Local state for UI-specific data
 - Persistent storage for data
 - Optimistic updates for better UX
 
 ### 3. Service Layer
+
 - Encapsulated business logic
 - API communication abstraction
 - Error handling and retries
@@ -306,12 +309,14 @@ PlaylistDetailScreen
 **Purpose**: Manage playlist operations
 
 **Responsibilities**:
+
 - Add playlists
 - Remove playlists
 - Sync playlists
 - Validate playlist URLs
 
 **Usage**:
+
 ```typescript
 const { addPlaylist, removePlaylist, syncPlaylist, loading, error } = usePlaylistManager();
 ```
@@ -321,6 +326,7 @@ const { addPlaylist, removePlaylist, syncPlaylist, loading, error } = usePlaylis
 **Purpose**: Handle download operations
 
 **Responsibilities**:
+
 - Download individual tracks
 - Download entire playlists
 - Manage concurrent downloads
@@ -328,6 +334,7 @@ const { addPlaylist, removePlaylist, syncPlaylist, loading, error } = usePlaylis
 - Handle cancellations
 
 **Usage**:
+
 ```typescript
 const { downloadTrack, downloadPlaylist, cancelDownload, activeDownloads } = useDownloadManager();
 ```
@@ -374,21 +381,25 @@ Auto Retry     User Action    Show Error
 ## Performance Optimizations
 
 ### 1. Lazy Loading
+
 - Screens loaded on demand
 - Large lists virtualized
 - Images loaded progressively
 
 ### 2. Memoization
+
 - React.memo for components
 - useMemo for expensive calculations
 - useCallback for event handlers
 
 ### 3. Concurrent Operations
+
 - Configurable download concurrency
 - Background task management
 - Queue-based processing
 
 ### 4. Caching
+
 - API response caching
 - Image caching
 - State persistence
@@ -396,18 +407,21 @@ Auto Retry     User Action    Show Error
 ## Security Considerations
 
 ### 1. Authentication
+
 - OAuth 2.0 flow
 - Secure token storage
 - Token refresh mechanism
 - Session management
 
 ### 2. Data Protection
+
 - Encrypted sensitive data
 - No credentials in code
 - Secure API communication
 - Input sanitization
 
 ### 3. Permissions
+
 - Minimal permission requests
 - Runtime permission handling
 - Clear permission rationale
@@ -416,18 +430,21 @@ Auto Retry     User Action    Show Error
 ## Testing Strategy
 
 ### Unit Tests
+
 - Utility functions
 - Service methods
 - State reducers
 - Custom hooks
 
 ### Component Tests
+
 - Rendering
 - User interactions
 - Props validation
 - State changes
 
 ### Integration Tests
+
 - API integration
 - Navigation flows
 - Data persistence
@@ -436,34 +453,41 @@ Auto Retry     User Action    Show Error
 ## Scalability Considerations
 
 ### 1. State Management
+
 - Current: Context API (suitable for small-medium apps)
 - Future: Redux Toolkit (if state complexity grows)
 
 ### 2. Data Storage
+
 - Current: AsyncStorage (suitable for moderate data)
 - Future: SQLite/Realm (for large datasets)
 
 ### 3. API Layer
+
 - Current: Direct API calls
 - Future: GraphQL/caching layer
 
 ### 4. Media Handling
+
 - Current: Local storage
 - Future: Cloud storage integration
 
 ## Build & Deployment
 
 ### Development Build
+
 ```
 npm start → Expo Go App → Quick Testing
 ```
 
 ### Preview Build
+
 ```
 eas build --platform android --profile preview → APK
 ```
 
 ### Production Build
+
 ```
 eas build --platform android/ios --profile production → Store Release
 ```
@@ -471,12 +495,14 @@ eas build --platform android/ios --profile production → Store Release
 ## Monitoring & Analytics
 
 ### Recommended Integrations
+
 - **Crash Reporting**: Sentry
 - **Analytics**: Firebase Analytics
 - **Performance**: React Native Performance
 - **Error Tracking**: Bugsnag
 
 ### Key Metrics
+
 - App crashes
 - Download success rate
 - Sync performance

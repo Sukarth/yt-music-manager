@@ -4,6 +4,10 @@ import { Track, Playlist } from '../../types';
 
 jest.mock('expo-file-system');
 
+// Mock global fetch
+const mockFetch = jest.fn();
+global.fetch = mockFetch;
+
 const mockedFileSystem = FileSystem as jest.Mocked<typeof FileSystem>;
 
 describe('DownloadService', () => {
@@ -37,6 +41,12 @@ describe('DownloadService', () => {
   beforeEach(() => {
     service = new DownloadService();
     jest.clearAllMocks();
+
+    // Mock successful fetch for getDownloadUrl
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ downloadUrl: 'https://example.com/audio.mp3' }),
+    });
   });
 
   describe('downloadTrack', () => {

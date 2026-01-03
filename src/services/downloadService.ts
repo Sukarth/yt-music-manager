@@ -92,24 +92,22 @@ export class DownloadService {
     }
   }
 
-  private async getDownloadUrl(videoId:  string, quality: AudioQuality): Promise<string> {
-  try {
-    const BACKEND_URL = 'https://yt-music-manager-backend.onrender.com';
-    
-    const response = await fetch(
-      `${BACKEND_URL}/api/download-info?videoId=${videoId}`
-    );
-    
-    if (!response.ok) {
-      throw new Error('Failed to get download URL');
+  private async getDownloadUrl(videoId: string, _quality: number): Promise<string> {
+    try {
+      const BACKEND_URL = 'https://yt-music-manager-backend.onrender.com';
+
+      const response = await fetch(`${BACKEND_URL}/api/download-info?videoId=${videoId}`);
+
+      if (!response.ok) {
+        throw new Error('Failed to get download URL');
+      }
+
+      const data = await response.json();
+      return data.downloadUrl;
+    } catch (error) {
+      console.error('Error getting download URL:', error);
+      throw error;
     }
-    
-    const data = await response. json();
-    return data.downloadUrl;
-  } catch (error) {
-    console.error('Error getting download URL:', error);
-    throw error;
-  }
   }
 
   async deleteTrackFile(filePath: string): Promise<void> {

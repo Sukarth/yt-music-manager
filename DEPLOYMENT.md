@@ -5,12 +5,14 @@ This guide provides detailed instructions for building and deploying the YT Musi
 ## Prerequisites
 
 ### Required Accounts
+
 - [ ] Apple Developer Account ($99/year) - for iOS
 - [ ] Google Play Console Account ($25 one-time) - for Android
 - [ ] Expo Account (free tier available)
 - [ ] GitHub Account (for CI/CD)
 
 ### Required Tools
+
 ```bash
 # Install Expo CLI
 npm install -g expo-cli
@@ -27,6 +29,7 @@ eas login
 ### 1. Set up Environment Variables
 
 Create `.env` file (never commit this):
+
 ```bash
 # Google OAuth
 GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
@@ -42,6 +45,7 @@ BACKEND_API_URL=https://your-backend-api.com
 ### 2. Configure app.json
 
 Update these values:
+
 ```json
 {
   "expo": {
@@ -80,6 +84,7 @@ keytool -genkeypair -v -storetype PKCS12 \
 ### Step 2: Configure EAS for Android
 
 Update `eas.json`:
+
 ```json
 {
   "build": {
@@ -106,6 +111,7 @@ eas build --platform android --profile production
 ### Step 4: Prepare Play Store Assets
 
 Required assets:
+
 - App icon (512x512 px)
 - Feature graphic (1024x500 px)
 - Phone screenshots (min 2, max 8)
@@ -165,6 +171,7 @@ eas credentials
 ```
 
 Select options:
+
 - Use existing Apple ID
 - Generate new Push Key
 - Generate new Distribution Certificate
@@ -182,6 +189,7 @@ eas build --platform ios --profile production
 ### Step 4: Prepare App Store Assets
 
 Required assets:
+
 - App icon (1024x1024 px)
 - iPhone screenshots (6.5", 5.5")
 - iPad screenshots (12.9", optional)
@@ -231,6 +239,7 @@ Timeline: 24-48 hours for review
 ### Setup Secrets
 
 Add to GitHub repository secrets:
+
 ```
 EXPO_TOKEN=your-expo-token
 ANDROID_KEYSTORE_BASE64=base64-encoded-keystore
@@ -245,6 +254,7 @@ APPLE_APP_SPECIFIC_PASSWORD=app-specific-password
 ### Automated Build Workflow
 
 The `.github/workflows/ci.yml` handles:
+
 - Linting and type checking
 - Running tests
 - Building APK/IPA on main branch
@@ -253,6 +263,7 @@ The `.github/workflows/ci.yml` handles:
 ### Automated Deployment
 
 For automated deployment:
+
 1. Tag release: `git tag v1.0.0`
 2. Push tag: `git push origin v1.0.0`
 3. GitHub Actions builds and submits
@@ -270,22 +281,21 @@ const app = express();
 
 app.get('/download', async (req, res) => {
   const { id, quality } = req.query;
-  
+
   // Use yt-dlp to get download URL
-  exec(`yt-dlp -f bestaudio -g https://youtube.com/watch?v=${id}`, 
-    (error, stdout) => {
-      if (error) {
-        return res.status(500).json({ error: 'Download failed' });
-      }
-      res.json({ url: stdout.trim() });
+  exec(`yt-dlp -f bestaudio -g https://youtube.com/watch?v=${id}`, (error, stdout) => {
+    if (error) {
+      return res.status(500).json({ error: 'Download failed' });
     }
-  );
+    res.json({ url: stdout.trim() });
+  });
 });
 
 app.listen(3000);
 ```
 
 Deploy to:
+
 - Heroku
 - AWS Lambda
 - Google Cloud Functions
@@ -304,16 +314,16 @@ app = Flask(__name__)
 def download():
     video_id = request.args.get('id')
     quality = request.args.get('quality', '192')
-    
+
     ydl_opts = {
         'format': 'bestaudio',
         'extractaudio': True,
         'audioformat': 'mp3',
         'audioquality': quality,
     }
-    
+
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        info = ydl.extract_info(f'https://youtube.com/watch?v={video_id}', 
+        info = ydl.extract_info(f'https://youtube.com/watch?v={video_id}',
                                 download=False)
         url = info['url']
         return jsonify({'url': url})
@@ -360,6 +370,7 @@ if __name__ == '__main__':
 ### Crash Reporting
 
 Setup Sentry:
+
 ```bash
 npm install @sentry/react-native
 
@@ -375,6 +386,7 @@ Sentry.init({
 ### Analytics
 
 Setup Firebase Analytics:
+
 ```bash
 expo install @react-native-firebase/app @react-native-firebase/analytics
 
@@ -389,6 +401,7 @@ analytics().logEvent('playlist_added', {
 ### Monitoring
 
 Monitor:
+
 - Crash reports
 - User reviews
 - Download numbers
@@ -398,6 +411,7 @@ Monitor:
 ### Updates
 
 For updates:
+
 1. Increment version in app.json
 2. Update CHANGELOG.md
 3. Build and test
@@ -407,6 +421,7 @@ For updates:
 ### Over-the-Air (OTA) Updates
 
 For minor updates:
+
 ```bash
 # Publish OTA update
 eas update --branch production --message "Bug fixes"
@@ -417,6 +432,7 @@ eas update --branch production --message "Bug fixes"
 ### Common Build Issues
 
 **Android build fails**:
+
 ```bash
 # Clear Gradle cache
 cd android && ./gradlew clean
@@ -426,6 +442,7 @@ eas build --platform android --clear-cache
 ```
 
 **iOS build fails**:
+
 ```bash
 # Check provisioning profiles
 eas credentials
@@ -437,6 +454,7 @@ eas build --platform ios --clear-cache
 ### Store Rejection Issues
 
 **App Store common rejections**:
+
 - Missing privacy policy
 - Incomplete app functionality
 - UI/UX issues
@@ -444,6 +462,7 @@ eas build --platform ios --clear-cache
 - Missing demo account
 
 **Play Store common rejections**:
+
 - Missing privacy policy
 - Permission justification needed
 - Content policy violations
@@ -467,12 +486,14 @@ eas build --platform ios --clear-cache
 ## Resources
 
 ### Official Documentation
+
 - [Expo Documentation](https://docs.expo.dev)
 - [EAS Build](https://docs.expo.dev/build/introduction/)
 - [App Store Guidelines](https://developer.apple.com/app-store/review/guidelines/)
 - [Play Store Guidelines](https://play.google.com/console/about/guides/)
 
 ### Community
+
 - Expo Discord
 - React Native Community
 - Stack Overflow
