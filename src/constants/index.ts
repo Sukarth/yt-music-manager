@@ -40,3 +40,5 @@ export const YOUTUBE_PLAYLIST_REGEX =
   /(?:youtube\.com\/(?:playlist\?list=|watch\?v=.*&list=)|youtu\.be\/.*\?list=)([a-zA-Z0-9_-]+)/;
 
 export const YOUTUBE_API_BASE_URL = 'https://www.googleapis.com/youtube/v3';
+
+export const BACKEND_URL = 'https://yt-music-manager-backend.onrender.com';

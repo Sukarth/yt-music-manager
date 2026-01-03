@@ -12,7 +12,7 @@ const ErrorMessage: React.FC<ErrorMessageProps> = ({ message, onRetry }) => {
   const theme = useTheme();
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <Ionicons name="alert-circle-outline" size={64} color={theme.colors.error} />
       <Text style={[styles.message, { color: theme.colors.error }]}>{message}</Text>
       {onRetry && (

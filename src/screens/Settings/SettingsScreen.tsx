@@ -1,6 +1,15 @@
 import React, { useState } from 'react';
 import { StyleSheet, ScrollView, Alert } from 'react-native';
-import { List, Switch, Button, Portal, Dialog, RadioButton, Divider } from 'react-native-paper';
+import {
+  List,
+  Switch,
+  Button,
+  Portal,
+  Dialog,
+  RadioButton,
+  Divider,
+  useTheme,
+} from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppContext } from '../../store/AppContext';
 import { authService } from '../../services/authService';
@@ -14,6 +23,7 @@ const getDocumentDirectory = (): string => {
 
 const SettingsScreen: React.FC = () => {
   const { state, dispatch } = useAppContext();
+  const theme = useTheme();
 
   const [qualityDialogVisible, setQualityDialogVisible] = useState(false);
   const [intervalDialogVisible, setIntervalDialogVisible] = useState(false);
@@ -136,7 +146,7 @@ const SettingsScreen: React.FC = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <ScrollView>
         <List.Section>
           <List.Subheader>Authentication</List.Subheader>

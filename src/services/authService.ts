@@ -1,4 +1,4 @@
-import * as AuthSession from 'expo-auth-session';
+import { AuthRequest, makeRedirectUri } from 'expo-auth-session';
 import { AuthState } from '../types';
 import { saveAuth, clearAuth } from '../utils/storage';
 
@@ -13,24 +13,19 @@ const discovery = {
 export class AuthService {
   async signInWithGoogle(): Promise<AuthState> {
     try {
-      const redirectUri = AuthSession.makeRedirectUri({
+      const redirectUri = makeRedirectUri({
         scheme: 'ytmusicmanager',
       });
 
-      const [request, , promptAsync] = AuthSession.useAuthRequest(
-        {
-          clientId: GOOGLE_CLIENT_ID,
-          scopes: ['https://www.googleapis.com/auth/youtube.readonly'],
-          redirectUri,
-        },
-        discovery
-      );
+      const request = new AuthRequest({
+        clientId: GOOGLE_CLIENT_ID,
+        scopes: ['https://www.googleapis.com/auth/youtube.readonly'],
+        redirectUri,
+      });
 
-      if (!request) {
-        throw new Error('Failed to create auth request');
-      }
+      await request.makeAuthUrlAsync(discovery);
 
-      const result = await promptAsync();
+      const result = await request.promptAsync(discovery);
 
       if (result.type !== 'success') {
         throw new Error('Authentication failed');

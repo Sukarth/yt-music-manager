@@ -8,6 +8,7 @@ import {
   RETRY_DELAY_MS,
   YOUTUBE_PLAYLIST_REGEX,
   YOUTUBE_API_BASE_URL,
+  BACKEND_URL,
 } from '../index';
 
 describe('constants', () => {
@@ -139,6 +140,12 @@ describe('constants', () => {
   describe('YOUTUBE_API_BASE_URL', () => {
     it('should be correct', () => {
       expect(YOUTUBE_API_BASE_URL).toBe('https://www.googleapis.com/youtube/v3');
+    });
+  });
+
+  describe('BACKEND_URL', () => {
+    it('should be correct', () => {
+      expect(BACKEND_URL).toBe('https://yt-music-manager-backend.onrender.com');
     });
   });
 });

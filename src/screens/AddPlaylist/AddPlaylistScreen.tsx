@@ -59,7 +59,7 @@ const AddPlaylistScreen: React.FC<AddPlaylistScreenProps> = ({ navigation }) => 
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <View style={styles.content}>
         <Text variant="bodyLarge" style={styles.description}>
           Enter a YouTube playlist URL or ID to add it to your library.
@@ -86,7 +86,7 @@ const AddPlaylistScreen: React.FC<AddPlaylistScreenProps> = ({ navigation }) => 
           </Text>
         )}
 
-        <View style={styles.examplesContainer}>
+        <View style={[styles.examplesContainer, { backgroundColor: theme.colors.surfaceVariant }]}>
           <Text variant="titleSmall" style={styles.examplesTitle}>
             Supported formats:
           </Text>
@@ -136,7 +136,6 @@ const styles = StyleSheet.create({
     marginTop: 16,
     marginBottom: 24,
     padding: 16,
-    backgroundColor: 'rgba(0, 0, 0, 0.05)',
     borderRadius: 8,
   },
   examplesTitle: {

@@ -1,6 +1,7 @@
 import * as FileSystem from 'expo-file-system';
 import { Track, Playlist } from '../types';
 import { sanitizeFileName } from '../utils/formatters';
+import { BACKEND_URL } from '../constants';
 
 type DownloadResumable = ReturnType<typeof FileSystem.createDownloadResumable>;
 
@@ -94,8 +95,6 @@ export class DownloadService {
 
   private async getDownloadUrl(videoId: string, _quality: number): Promise<string> {
     try {
-      const BACKEND_URL = 'https://yt-music-manager-backend.onrender.com';
-
       const response = await fetch(`${BACKEND_URL}/api/download-info?videoId=${videoId}`);
 
       if (!response.ok) {
