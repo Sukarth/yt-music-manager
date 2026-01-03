@@ -85,7 +85,7 @@ jobs:
         run: npm ci
 
       - name: Install Expo CLI
-        run: npm install -g expo-cli @expo/ngrok
+        run: npm install -g @expo/cli
 
       - name: Generate native Android project
         run: npx expo prebuild --platform android --clean
