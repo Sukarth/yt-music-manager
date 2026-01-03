@@ -39,4 +39,15 @@ export const RETRY_DELAY_MS = 2000;
 export const YOUTUBE_PLAYLIST_REGEX =
   /(?:youtube\.com\/(?:playlist\?list=|watch\?v=.*&list=)|youtu\.be\/.*\?list=)([a-zA-Z0-9_-]+)/;
 
+export const YOUTUBE_API_BASE_URL = 'https://www.googleapis.com/youtube/v3';
+
+// YouTube Data API key - required for fetching playlist information
+// To get your own API key:
+// 1. Go to https://console.cloud.google.com
+// 2. Create a new project or select existing one
+// 3. Enable "YouTube Data API v3"
+// 4. Go to Credentials and create an API key
+// 5. (Optional) Restrict the key to YouTube Data API v3
+export const YOUTUBE_API_KEY = 'AIzaSyA-placeholder-key-replace-with-your-own';
+
 export const BACKEND_URL = 'https://yt-music-manager-backend.onrender.com';

@@ -4,6 +4,7 @@ import { Playlist, Track } from '../types';
 import { youtubeApi } from '../services/youtubeApi';
 import { extractPlaylistId } from '../utils/formatters';
 import { downloadService } from '../services/downloadService';
+import { YOUTUBE_API_KEY } from '../constants';
 
 export const usePlaylistManager = () => {
   const { state, dispatch } = useAppContext();
@@ -24,6 +25,9 @@ export const usePlaylistManager = () => {
       if (existingPlaylist) {
         throw new Error('Playlist already exists');
       }
+
+      // Set API key for YouTube Data API requests
+      youtubeApi.setApiKey(YOUTUBE_API_KEY);
 
       if (state.auth.accessToken) {
         youtubeApi.setAccessToken(state.auth.accessToken);
@@ -123,6 +127,9 @@ export const usePlaylistManager = () => {
           payload: { ...playlist, syncStatus: 'syncing' },
         });
       }
+
+      // Set API key for YouTube Data API requests
+      youtubeApi.setApiKey(YOUTUBE_API_KEY);
 
       if (state.auth.accessToken) {
         youtubeApi.setAccessToken(state.auth.accessToken);
