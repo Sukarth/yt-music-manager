@@ -198,7 +198,7 @@ const SettingsScreen: React.FC = () => {
             title="YouTube API Key"
             description={
               state.settings.youtubeApiKey
-                ? `Configured: ${state.settings.youtubeApiKey.substring(0, 10)}...`
+                ? 'Configured ✓'
                 : 'Not configured - Required for playlist fetching'
             }
             left={props => <List.Icon {...props} icon="key" />}
@@ -387,7 +387,7 @@ const SettingsScreen: React.FC = () => {
               value={apiKeyInput}
               onChangeText={setApiKeyInput}
               mode="outlined"
-              placeholder="AIzaSy..."
+              placeholder="Enter your YouTube API key"
               autoCapitalize="none"
               autoCorrect={false}
             />
