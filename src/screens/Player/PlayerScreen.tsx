@@ -128,7 +128,7 @@ const PlayerScreen: React.FC<PlayerScreenProps> = ({ route, navigation }) => {
 
   if (!track) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
         <Text>Track not found</Text>
       </SafeAreaView>
     );
@@ -136,14 +136,14 @@ const PlayerScreen: React.FC<PlayerScreenProps> = ({ route, navigation }) => {
 
   if (track.downloadStatus !== 'completed' || !track.filePath) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
         <Text>Track not downloaded</Text>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <View style={styles.content}>
         {track.thumbnailUrl && (
           <Image source={{ uri: track.thumbnailUrl }} style={styles.artwork} />

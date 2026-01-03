@@ -62,7 +62,7 @@ const SyncPreviewScreen: React.FC<SyncPreviewScreenProps> = ({ route, navigation
 
   if (!preview) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
         <Text>Failed to load sync preview</Text>
       </SafeAreaView>
     );
@@ -71,7 +71,7 @@ const SyncPreviewScreen: React.FC<SyncPreviewScreenProps> = ({ route, navigation
   const hasChanges = preview.tracksToAdd.length > 0 || preview.tracksToRemove.length > 0;
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <View style={styles.header}>
         <Text variant="headlineSmall">Sync Preview</Text>
         <Text variant="bodyMedium" style={styles.summary}>

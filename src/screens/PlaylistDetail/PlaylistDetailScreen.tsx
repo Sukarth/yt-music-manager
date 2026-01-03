@@ -104,14 +104,14 @@ const PlaylistDetailScreen: React.FC<PlaylistDetailScreenProps> = ({ navigation,
 
   if (!playlist) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
         <Text>Playlist not found</Text>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <View style={styles.header}>
         <Text variant="headlineSmall" numberOfLines={2}>
           {playlist.name}
