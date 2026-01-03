@@ -2,6 +2,8 @@
 
 A production-ready React Native mobile application for managing and downloading YouTube Music playlists on iOS and Android devices.
 
+> **⚠️ Important Setup Required**: Before using the app, you must configure a YouTube Data API v3 key in Settings. See [Setup Instructions](#setup-youtube-api-key) below.
+
 ## Features
 
 ### Core Functionality
@@ -70,6 +72,21 @@ npm install
 # Update src/services/authService.ts with your Google OAuth Client ID
 GOOGLE_CLIENT_ID='your-google-client-id'
 ```
+
+## Setup YouTube API Key
+
+**Required for the app to work!** The app needs a YouTube Data API v3 key to fetch playlist information.
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com)
+2. Create a new project or select an existing one
+3. Navigate to "APIs & Services" → "Library"
+4. Search for and enable "YouTube Data API v3"
+5. Go to "Credentials" and click "Create Credentials" → "API Key"
+6. Copy the generated API key
+7. Open the app → Settings → YouTube API Key
+8. Paste your API key and save
+
+**Note**: The YouTube API has a free quota of 10,000 units per day. Each playlist fetch uses ~3-5 units.
 
 ## Development
 
