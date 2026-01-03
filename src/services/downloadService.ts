@@ -92,8 +92,24 @@ export class DownloadService {
     }
   }
 
-  private async getDownloadUrl(youtubeId: string, quality: number): Promise<string> {
-    return `https://example-yt-dlp-bridge.com/download?id=${youtubeId}&quality=${quality}`;
+  private async getDownloadUrl(videoId:  string, quality: AudioQuality): Promise<string> {
+  try {
+    const BACKEND_URL = 'https://yt-music-manager-backend.onrender.com';
+    
+    const response = await fetch(
+      `${BACKEND_URL}/api/download-info?videoId=${videoId}`
+    );
+    
+    if (!response.ok) {
+      throw new Error('Failed to get download URL');
+    }
+    
+    const data = await response. json();
+    return data.downloadUrl;
+  } catch (error) {
+    console.error('Error getting download URL:', error);
+    throw error;
+  }
   }
 
   async deleteTrackFile(filePath: string): Promise<void> {
