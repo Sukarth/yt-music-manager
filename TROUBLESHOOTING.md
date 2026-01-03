@@ -195,7 +195,60 @@ if (__DEV__) {
 }
 ```
 
+### Playlist Fetch Fails - "Failed to fetch playlist information"
+
+**Error**: When adding a valid YouTube playlist URL, the app shows "Failed to fetch playlist information"
+
+**Causes**:
+1. **Backend service is sleeping** - The backend on Render (free tier) goes to sleep after 15 minutes of inactivity
+2. **Backend not running** - The backend service may be down
+3. **Network issues** - Unable to reach the backend server
+
+**Solutions**:
+
+1. **Wake up the backend**: Visit the backend URL directly in a browser first:
+   ```
+   https://yt-music-manager-backend.onrender.com/health
+   ```
+   Wait 30-60 seconds for the cold start to complete, then retry in the app.
+
+2. **Check backend status**: The backend at `https://yt-music-manager-backend.onrender.com` must be running and have the following endpoints:
+   - `GET /api/playlist-info?playlistId={id}` - Returns playlist metadata
+   - `GET /api/playlist-videos?playlistId={id}` - Returns list of videos
+
+3. **Self-host the backend**: See `BACKEND_ALTERNATIVES.md` for alternative hosting options that don't have cold start issues.
+
+4. **Set up ping service**: Use a free service like [UptimeRobot](https://uptimerobot.com) to ping your backend every 14 minutes to prevent sleeping.
+
 ## Authentication Issues
+
+### Google Sign-In Fails with "Access blocked: Authorization Error"
+
+**Error**: 
+```
+Error 400: invalid_request
+Request details: redirect_uri=ytmusicmanager://
+```
+
+This error occurs when the redirect URI is not properly configured in Google Cloud Console.
+
+**Solution - Configure Google Cloud Console**:
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com)
+2. Select your project
+3. Navigate to **APIs & Services** → **Credentials**
+4. Click on your OAuth 2.0 Client ID
+5. Under "Authorized redirect URIs", add the following:
+   - `ytmusicmanager://` (for production builds)
+   - `exp://localhost:19000` (for development with Expo Go)
+   - `exp://192.168.x.x:19000` (replace with your local IP for device testing)
+6. Click **Save**
+
+**Important Notes**:
+- Changes may take a few minutes to propagate
+- For Android standalone builds, you need an **Android** type OAuth client
+- The Client ID in the app must match the one in Google Cloud Console
+- Make sure the YouTube Data API v3 is enabled in your project
 
 ### Google Sign-In Fails
 
@@ -203,11 +256,9 @@ if (__DEV__) {
 
 **Solutions**:
 
-1. Verify Google Client ID is correct
-2. Check redirect URIs in Google Console:
-   - Add: `exp://localhost:19000`
-   - Add: `ytmusicmanager://`
-3. Enable Google Sign-In API
+1. Verify Google Client ID is correct in `src/services/authService.ts`
+2. Check redirect URIs in Google Console (see above)
+3. Enable YouTube Data API v3 in Google Cloud Console
 4. Clear app data and retry
 
 ### Token Expired
