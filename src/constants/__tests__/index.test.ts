@@ -7,8 +7,6 @@ import {
   MAX_RETRY_ATTEMPTS,
   RETRY_DELAY_MS,
   YOUTUBE_PLAYLIST_REGEX,
-  YOUTUBE_API_BASE_URL,
-  YOUTUBE_API_KEY,
   BACKEND_URL,
 } from '../index';
 
@@ -135,19 +133,6 @@ describe('constants', () => {
       const url = 'https://youtu.be/abc?list=PLtest123456';
       const match = url.match(YOUTUBE_PLAYLIST_REGEX);
       expect(match).toBeTruthy();
-    });
-  });
-
-  describe('YOUTUBE_API_BASE_URL', () => {
-    it('should be correct', () => {
-      expect(YOUTUBE_API_BASE_URL).toBe('https://www.googleapis.com/youtube/v3');
-    });
-  });
-
-  describe('YOUTUBE_API_KEY', () => {
-    it('should be defined', () => {
-      expect(YOUTUBE_API_KEY).toBeDefined();
-      expect(typeof YOUTUBE_API_KEY).toBe('string');
     });
   });
 

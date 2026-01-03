@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { YOUTUBE_API_BASE_URL } from '../constants';
+import { BACKEND_URL } from '../constants';
 
 export interface YouTubePlaylistInfo {
   id: string;
@@ -17,31 +17,51 @@ export interface YouTubeVideoInfo {
   thumbnailUrl: string;
 }
 
-export class YouTubeApiService {
-  private apiKey: string | null = null;
-  private accessToken: string | null = null;
+// Backend API response types
+interface BackendPlaylistInfoResponse {
+  id: string;
+  title: string;
+  description: string;
+  thumbnailUrl: string;
+  itemCount: number;
+}
 
-  setApiKey(key: string) {
-    this.apiKey = key;
-  }
+interface BackendVideoInfo {
+  id: string;
+  title: string;
+  author: string;
+  duration: number;
+  thumbnailUrl: string;
+}
+
+interface BackendPlaylistVideosResponse {
+  playlistId: string;
+  title: string;
+  itemCount: number;
+  videos: BackendVideoInfo[];
+}
+
+export class YouTubeApiService {
+  private accessToken: string | null = null;
 
   setAccessToken(token: string) {
     this.accessToken = token;
   }
 
-  private async makeRequest(endpoint: string, params: Record<string, any>) {
+  private async makeBackendRequest<T>(
+    endpoint: string,
+    params: Record<string, string>
+  ): Promise<T> {
     const headers: Record<string, string> = {};
 
     if (this.accessToken) {
       headers['Authorization'] = `Bearer ${this.accessToken}`;
     }
 
-    const response = await axios.get(`${YOUTUBE_API_BASE_URL}${endpoint}`, {
-      params: {
-        ...params,
-        key: this.apiKey,
-      },
+    const queryParams = new URLSearchParams(params).toString();
+    const response = await axios.get<T>(`${BACKEND_URL}/api${endpoint}?${queryParams}`, {
       headers,
+      timeout: 30000, // 30 second timeout for cold starts
     });
 
     return response.data;
@@ -49,22 +69,16 @@ export class YouTubeApiService {
 
   async getPlaylistInfo(playlistId: string): Promise<YouTubePlaylistInfo> {
     try {
-      const data = await this.makeRequest('/playlists', {
-        part: 'snippet,contentDetails',
-        id: playlistId,
+      const data = await this.makeBackendRequest<BackendPlaylistInfoResponse>('/playlist-info', {
+        playlistId,
       });
 
-      if (!data.items || data.items.length === 0) {
-        throw new Error('Playlist not found');
-      }
-
-      const playlist = data.items[0];
       return {
-        id: playlist.id,
-        title: playlist.snippet.title,
-        description: playlist.snippet.description || '',
-        thumbnailUrl: playlist.snippet.thumbnails?.medium?.url || '',
-        itemCount: playlist.contentDetails.itemCount,
+        id: data.id,
+        title: data.title,
+        description: data.description || '',
+        thumbnailUrl: data.thumbnailUrl || '',
+        itemCount: data.itemCount,
       };
     } catch (error) {
       console.error('Error fetching playlist info:', error);
@@ -74,73 +88,24 @@ export class YouTubeApiService {
 
   async getPlaylistVideos(playlistId: string): Promise<YouTubeVideoInfo[]> {
     try {
-      const videos: YouTubeVideoInfo[] = [];
-      let nextPageToken: string | undefined;
-
-      do {
-        const data = await this.makeRequest('/playlistItems', {
-          part: 'snippet,contentDetails',
+      const data = await this.makeBackendRequest<BackendPlaylistVideosResponse>(
+        '/playlist-videos',
+        {
           playlistId,
-          maxResults: 50,
-          pageToken: nextPageToken,
-        });
-
-        if (data.items) {
-          for (const item of data.items) {
-            const videoId = item.contentDetails.videoId;
-            const videoDetails = await this.getVideoDetails(videoId);
-            if (videoDetails) {
-              videos.push(videoDetails);
-            }
-          }
         }
+      );
 
-        nextPageToken = data.nextPageToken;
-      } while (nextPageToken);
-
-      return videos;
+      return data.videos.map(video => ({
+        id: video.id,
+        title: video.title,
+        artist: video.author,
+        duration: video.duration,
+        thumbnailUrl: video.thumbnailUrl || '',
+      }));
     } catch (error) {
       console.error('Error fetching playlist videos:', error);
       throw new Error('Failed to fetch playlist videos');
     }
-  }
-
-  async getVideoDetails(videoId: string): Promise<YouTubeVideoInfo | null> {
-    try {
-      const data = await this.makeRequest('/videos', {
-        part: 'snippet,contentDetails',
-        id: videoId,
-      });
-
-      if (!data.items || data.items.length === 0) {
-        return null;
-      }
-
-      const video = data.items[0];
-      const duration = this.parseDuration(video.contentDetails.duration);
-
-      return {
-        id: videoId,
-        title: video.snippet.title,
-        artist: video.snippet.channelTitle,
-        duration,
-        thumbnailUrl: video.snippet.thumbnails?.medium?.url || '',
-      };
-    } catch (error) {
-      console.error('Error fetching video details:', error);
-      return null;
-    }
-  }
-
-  private parseDuration(duration: string): number {
-    const match = duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
-    if (!match) return 0;
-
-    const hours = parseInt(match[1] || '0', 10);
-    const minutes = parseInt(match[2] || '0', 10);
-    const seconds = parseInt(match[3] || '0', 10);
-
-    return hours * 3600 + minutes * 60 + seconds;
   }
 }
 

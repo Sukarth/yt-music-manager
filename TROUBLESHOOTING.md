@@ -200,37 +200,24 @@ if (__DEV__) {
 **Error**: When adding a valid YouTube playlist URL, the app shows "Failed to fetch playlist information"
 
 **Causes**:
-1. **YouTube API key not configured** - A valid YouTube Data API key is required
-2. **Invalid or restricted API key** - The API key may be invalid or restricted
-3. **API quota exceeded** - YouTube Data API has daily quota limits
-4. **Network issues** - Unable to reach YouTube API servers
+1. **Backend service is sleeping** - The backend on Render (free tier) goes to sleep after 15 minutes of inactivity
+2. **Backend missing playlist endpoints** - The backend needs to have `/api/playlist-info` and `/api/playlist-videos` endpoints
+3. **Network issues** - Unable to reach the backend server
 
 **Solutions**:
 
-1. **Configure a YouTube Data API key**:
-   The app requires a YouTube Data API key to fetch playlist information. To get your own API key:
-   
-   a. Go to [Google Cloud Console](https://console.cloud.google.com)
-   b. Create a new project or select an existing one
-   c. Navigate to **APIs & Services** → **Library**
-   d. Search for "YouTube Data API v3" and enable it
-   e. Go to **APIs & Services** → **Credentials**
-   f. Click **Create Credentials** → **API Key**
-   g. (Recommended) Click **Edit** on your API key and restrict it to YouTube Data API v3
-   h. Copy the API key
-
-2. **Update the API key in the app**:
-   Edit the file `src/constants/index.ts` and replace the placeholder key:
-   ```typescript
-   export const YOUTUBE_API_KEY = 'YOUR_ACTUAL_API_KEY_HERE';
+1. **Wake up the backend**: Visit the backend URL directly in a browser first:
    ```
+   https://yt-music-manager-backend.onrender.com/health
+   ```
+   Wait 30-60 seconds for the cold start to complete, then retry in the app.
 
-3. **Check API quota**: If you see quota errors, wait until the quota resets (daily) or request a quota increase in Google Cloud Console.
+2. **Update the backend**: If you haven't already, you need to add playlist endpoints to the backend.
+   See `BACKEND_UPDATE_REQUIRED.md` for the exact code changes needed.
 
-4. **Verify API key restrictions**: If you restricted your API key, make sure:
-   - It's not restricted to specific IP addresses (mobile apps have dynamic IPs)
-   - It's allowed for YouTube Data API v3
-   - It doesn't have any referrer restrictions
+3. **Keep backend awake**: Use a free ping service like [UptimeRobot](https://uptimerobot.com) to ping your backend every 14 minutes to prevent sleeping.
+
+4. **Alternative hosting**: Consider switching to a hosting provider without cold starts. See `BACKEND_ALTERNATIVES.md` for options.
 
 ## Authentication Issues
 
