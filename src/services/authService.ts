@@ -2,7 +2,7 @@ import { AuthRequest, makeRedirectUri } from 'expo-auth-session';
 import { AuthState } from '../types';
 import { saveAuth, clearAuth } from '../utils/storage';
 
-const GOOGLE_CLIENT_ID = '16949272129-9nsr5j9cfsit7ksugpgbu8m08r8tkj7o.apps.googleusercontent.com';
+const GOOGLE_CLIENT_ID = '16949272129-dhv9fckqks0fr7f0b8sd23tviortdsav.apps.googleusercontent.com';
 
 const discovery = {
   authorizationEndpoint: 'https://accounts.google.com/o/oauth2/v2/auth',
