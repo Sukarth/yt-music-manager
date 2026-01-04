@@ -1,8 +1,29 @@
 import { AuthRequest, makeRedirectUri } from 'expo-auth-session';
+import { Platform } from 'react-native';
 import { AuthState } from '../types';
 import { saveAuth, clearAuth } from '../utils/storage';
 
+// Web/Default Client ID
 const GOOGLE_CLIENT_ID = '16949272129-dhv9fckqks0fr7f0b8sd23tviortdsav.apps.googleusercontent.com';
+// Android Client ID (for OAuth type "Android" in Google Cloud Console)
+const GOOGLE_ANDROID_CLIENT_ID =
+  '16949272129-dhv9fckqks0fr7f0b8sd23tviortdsav.apps.googleusercontent.com';
+// iOS Client ID
+const GOOGLE_IOS_CLIENT_ID =
+  '16949272129-dhv9fckqks0fr7f0b8sd23tviortdsav.apps.googleusercontent.com';
+
+/**
+ * Get the platform-specific Google Client ID
+ */
+const getGoogleClientId = (): string => {
+  return (
+    Platform.select({
+      android: GOOGLE_ANDROID_CLIENT_ID,
+      ios: GOOGLE_IOS_CLIENT_ID,
+      default: GOOGLE_CLIENT_ID,
+    }) || GOOGLE_CLIENT_ID
+  );
+};
 
 const discovery = {
   authorizationEndpoint: 'https://accounts.google.com/o/oauth2/v2/auth',
@@ -17,8 +38,10 @@ export class AuthService {
         scheme: 'ytmusicmanager',
       });
 
+      const clientId = getGoogleClientId();
+
       const request = new AuthRequest({
-        clientId: GOOGLE_CLIENT_ID,
+        clientId,
         scopes: ['https://www.googleapis.com/auth/youtube.readonly'],
         redirectUri,
       });
@@ -32,8 +55,9 @@ export class AuthService {
       }
 
       const { code } = result.params;
+      const codeVerifier = request.codeVerifier;
 
-      const tokenResponse = await this.exchangeCodeForToken(code, redirectUri);
+      const tokenResponse = await this.exchangeCodeForToken(code, redirectUri, codeVerifier);
 
       const authState: AuthState = {
         isAuthenticated: true,
@@ -55,23 +79,33 @@ export class AuthService {
 
   private async exchangeCodeForToken(
     code: string,
-    redirectUri: string
+    redirectUri: string,
+    codeVerifier?: string
   ): Promise<{
     access_token: string;
     refresh_token?: string;
     expires_in: number;
   }> {
+    const clientId = getGoogleClientId();
+
+    const params: Record<string, string> = {
+      code,
+      client_id: clientId,
+      redirect_uri: redirectUri,
+      grant_type: 'authorization_code',
+    };
+
+    // Include code_verifier for PKCE flow if available
+    if (codeVerifier) {
+      params.code_verifier = codeVerifier;
+    }
+
     const response = await fetch(discovery.tokenEndpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
       },
-      body: new URLSearchParams({
-        code,
-        client_id: GOOGLE_CLIENT_ID,
-        redirect_uri: redirectUri,
-        grant_type: 'authorization_code',
-      }).toString(),
+      body: new URLSearchParams(params).toString(),
     });
 
     if (!response.ok) {
@@ -83,6 +117,8 @@ export class AuthService {
 
   async refreshAccessToken(refreshToken: string): Promise<AuthState> {
     try {
+      const clientId = getGoogleClientId();
+
       const response = await fetch(discovery.tokenEndpoint, {
         method: 'POST',
         headers: {
@@ -90,7 +126,7 @@ export class AuthService {
         },
         body: new URLSearchParams({
           refresh_token: refreshToken,
-          client_id: GOOGLE_CLIENT_ID,
+          client_id: clientId,
           grant_type: 'refresh_token',
         }).toString(),
       });
