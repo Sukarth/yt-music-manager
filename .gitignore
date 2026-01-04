@@ -66,6 +66,8 @@ logs/
 android-service-account.json
 google-services.json
 GoogleService-Info.plist
+keystore_base64.txt
+github_secrets.txt
 
 # OS
 Thumbs.db
