@@ -15,6 +15,9 @@ const GOOGLE_ANDROID_CLIENT_ID =
 // TODO: Replace this with iOS OAuth client ID from Google Cloud Console
 const GOOGLE_IOS_CLIENT_ID = 'IOS_CLIENT_ID_HERE.apps.googleusercontent.com';
 
+// Android package name - must match the package name in app.json
+const ANDROID_PACKAGE_NAME = 'com.ytmusicmanager.app';
+
 /**
  * Get the platform-specific Google Client ID
  */
@@ -37,14 +40,14 @@ const discovery = {
 export class AuthService {
   async signInWithGoogle(): Promise<AuthState> {
     try {
-      // For Android native/production builds, we need to use `native: true`
-      // to generate a redirect URI based on the app's package name.
+      // For Android native/production builds, we need to use the `native` option
+      // with a package name-based redirect URI.
       // Custom schemes like 'ytmusicmanager://' are not supported by Google OAuth for Android.
-      // The `native` option generates a redirect URI in the format:
-      // `com.ytmusicmanager.app:/oauth2redirect` which is accepted by Google OAuth.
+      // The `native` option accepts a string URI in the format:
+      // `<package-name>:/oauth2redirect` which is accepted by Google OAuth.
       const redirectUri = makeRedirectUri({
         scheme: 'ytmusicmanager',
-        native: Platform.OS === 'android' ? 'com.ytmusicmanager.app:/oauth2redirect' : undefined,
+        native: Platform.OS === 'android' ? `${ANDROID_PACKAGE_NAME}:/oauth2redirect` : undefined,
       });
 
       const clientId = getGoogleClientId();
