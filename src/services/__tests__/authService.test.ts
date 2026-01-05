@@ -1,7 +1,17 @@
 import * as SecureStore from 'expo-secure-store';
+import { Platform } from 'react-native';
 import { AuthService } from '../authService';
 
 jest.mock('expo-secure-store');
+jest.mock('expo-auth-session', () => ({
+  AuthRequest: jest.fn(),
+  makeRedirectUri: jest.fn(() => 'ytmusicmanager://'),
+}));
+jest.mock('react-native', () => ({
+  Platform: {
+    select: jest.fn(obj => obj.default),
+  },
+}));
 jest.mock('../../utils/storage', () => ({
   saveAuth: jest.fn(),
   clearAuth: jest.fn(),
@@ -50,6 +60,58 @@ describe('AuthService', () => {
       (global.fetch as jest.Mock).mockRejectedValueOnce(new Error('Network error'));
 
       await expect(service.refreshAccessToken('refresh-token')).rejects.toThrow('Network error');
+    });
+
+    it('should use platform-specific client ID on Android', async () => {
+      const mockSelect = Platform.select as jest.Mock;
+      mockSelect.mockImplementation(obj => obj.android);
+
+      (global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            access_token: 'new-token',
+            expires_in: 3600,
+          }),
+      });
+
+      await service.refreshAccessToken('refresh-token');
+
+      expect(mockSelect).toHaveBeenCalledWith(
+        expect.objectContaining({
+          android: expect.any(String),
+          ios: expect.any(String),
+          default: expect.any(String),
+        })
+      );
+
+      mockSelect.mockImplementation(obj => obj.default);
+    });
+
+    it('should use platform-specific client ID on iOS', async () => {
+      const mockSelect = Platform.select as jest.Mock;
+      mockSelect.mockImplementation(obj => obj.ios);
+
+      (global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            access_token: 'new-token',
+            expires_in: 3600,
+          }),
+      });
+
+      await service.refreshAccessToken('refresh-token');
+
+      expect(mockSelect).toHaveBeenCalledWith(
+        expect.objectContaining({
+          android: expect.any(String),
+          ios: expect.any(String),
+          default: expect.any(String),
+        })
+      );
+
+      mockSelect.mockImplementation(obj => obj.default);
     });
   });
 
