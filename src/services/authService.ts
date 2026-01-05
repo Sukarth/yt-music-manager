@@ -5,8 +5,11 @@ import { saveAuth, clearAuth } from '../utils/storage';
 
 // Web/Default Client ID
 // TODO: Replace this with web client ID from Google Cloud Console
-const GOOGLE_CLIENT_ID =  'WEB_CLIENT_ID_HERE.apps.googleusercontent.com';// Android Client ID (for OAuth type "Android" in Google Cloud Console)
+const GOOGLE_CLIENT_ID =  'WEB_CLIENT_ID_HERE.apps.googleusercontent.com';
+
+// Android Client ID (for OAuth type "Android" in Google Cloud Console)
 const GOOGLE_ANDROID_CLIENT_ID = '16949272129-dhv9fckqks0fr7f0b8sd23tviortdsav.apps.googleusercontent.com';
+
 // iOS Client ID
 // TODO: Replace this with iOS OAuth client ID from Google Cloud Console
 const GOOGLE_IOS_CLIENT_ID = 'IOS_CLIENT_ID_HERE.apps.googleusercontent.com';
