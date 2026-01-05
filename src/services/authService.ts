@@ -37,8 +37,14 @@ const discovery = {
 export class AuthService {
   async signInWithGoogle(): Promise<AuthState> {
     try {
+      // For Android native/production builds, we need to use `native: true`
+      // to generate a redirect URI based on the app's package name.
+      // Custom schemes like 'ytmusicmanager://' are not supported by Google OAuth for Android.
+      // The `native` option generates a redirect URI in the format:
+      // `com.ytmusicmanager.app:/oauth2redirect` which is accepted by Google OAuth.
       const redirectUri = makeRedirectUri({
         scheme: 'ytmusicmanager',
+        native: Platform.OS === 'android' ? 'com.ytmusicmanager.app:/oauth2redirect' : undefined,
       });
 
       const clientId = getGoogleClientId();
