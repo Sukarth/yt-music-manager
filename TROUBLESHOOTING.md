@@ -245,6 +245,8 @@ For Android apps, you must use a **Web Application** OAuth client (not Android c
 5. Under **"Authorized redirect URIs"**, add:
    - `http://127.0.0.1` (for loopback redirect - required for Android)
    - `http://localhost` (optional, as an alternative)
+   
+   **Note**: Do NOT include port numbers in these URIs. Google will match any port when the base URI matches. The app dynamically uses a random available port at runtime.
 6. Click **Create** or **Save**
 7. Copy the **Client ID** and update it in `src/services/authService.ts` as `GOOGLE_WEB_CLIENT_ID`
 

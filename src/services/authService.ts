@@ -57,7 +57,6 @@ export class AuthService {
       //
       // See: https://developers.google.com/identity/protocols/oauth2/native-app#redirect-uri_loopback
       const redirectUri = makeRedirectUri({
-        // Use 'useProxy: false' for production builds
         // The scheme is used for development/Expo Go, but for production
         // Android builds, expo-auth-session will use the loopback redirect
         scheme: 'ytmusicmanager',
