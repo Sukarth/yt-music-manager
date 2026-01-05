@@ -3,31 +3,33 @@ import { Platform } from 'react-native';
 import { AuthState } from '../types';
 import { saveAuth, clearAuth } from '../utils/storage';
 
-// Web/Default Client ID
+// Web Client ID (for OAuth type "Web application" in Google Cloud Console)
+// Used for Android via loopback redirect and as fallback
 // TODO: Replace this with web client ID from Google Cloud Console
-const GOOGLE_CLIENT_ID = 'WEB_CLIENT_ID_HERE.apps.googleusercontent.com';
+const GOOGLE_WEB_CLIENT_ID = 'WEB_CLIENT_ID_HERE.apps.googleusercontent.com';
 
-// Android Client ID (for OAuth type "Android" in Google Cloud Console)
-const GOOGLE_ANDROID_CLIENT_ID =
-  '16949272129-dhv9fckqks0fr7f0b8sd23tviortdsav.apps.googleusercontent.com';
-
-// iOS Client ID
+// iOS Client ID (for OAuth type "iOS" in Google Cloud Console)
 // TODO: Replace this with iOS OAuth client ID from Google Cloud Console
 const GOOGLE_IOS_CLIENT_ID = 'IOS_CLIENT_ID_HERE.apps.googleusercontent.com';
 
-// Android package name - must match the package name in app.json
-const ANDROID_PACKAGE_NAME = 'com.ytmusicmanager.app';
-
 /**
  * Get the platform-specific Google Client ID
+ *
+ * IMPORTANT: For Android, we use Web Client ID because:
+ * - Custom URI schemes are NOT supported by Google OAuth for Android apps
+ * - Android native builds must use loopback IP redirect (http://127.0.0.1:port)
+ * - Loopback redirects require a Web Application OAuth client, not an Android client
+ *
+ * See: https://developers.google.com/identity/protocols/oauth2/native-app
  */
 const getGoogleClientId = (): string => {
   return (
     Platform.select({
-      android: GOOGLE_ANDROID_CLIENT_ID,
+      // Android uses Web Client ID with loopback redirect
+      android: GOOGLE_WEB_CLIENT_ID,
       ios: GOOGLE_IOS_CLIENT_ID,
-      default: GOOGLE_CLIENT_ID,
-    }) || GOOGLE_CLIENT_ID
+      default: GOOGLE_WEB_CLIENT_ID,
+    }) || GOOGLE_WEB_CLIENT_ID
   );
 };
 
@@ -40,14 +42,28 @@ const discovery = {
 export class AuthService {
   async signInWithGoogle(): Promise<AuthState> {
     try {
-      // For Android native/production builds, we need to use the `native` option
-      // with a package name-based redirect URI.
-      // Custom schemes like 'ytmusicmanager://' are not supported by Google OAuth for Android.
-      // The `native` option accepts a string URI in the format:
-      // `<package-name>:/oauth2redirect` which is accepted by Google OAuth.
+      // For Android native/production builds, we MUST use loopback IP redirect.
+      // Custom URI schemes (like 'com.ytmusicmanager.app://') are NOT supported
+      // by Google OAuth for Android apps.
+      //
+      // The loopback redirect works by:
+      // 1. Starting a local HTTP server on a random available port
+      // 2. Using http://127.0.0.1:<port> as the redirect URI
+      // 3. Google redirects to this local server after authentication
+      // 4. The app captures the authorization code from the redirect
+      //
+      // This requires using a Web Application OAuth client (not Android client)
+      // with the redirect URI configured in Google Cloud Console.
+      //
+      // See: https://developers.google.com/identity/protocols/oauth2/native-app#redirect-uri_loopback
       const redirectUri = makeRedirectUri({
+        // Use 'useProxy: false' for production builds
+        // The scheme is used for development/Expo Go, but for production
+        // Android builds, expo-auth-session will use the loopback redirect
         scheme: 'ytmusicmanager',
-        native: Platform.OS === 'android' ? `${ANDROID_PACKAGE_NAME}:/oauth2redirect` : undefined,
+        // For native Android builds, prefer loopback redirect
+        // Setting 'preferLocalhost: true' ensures loopback IP is used
+        preferLocalhost: Platform.OS === 'android',
       });
 
       const clientId = getGoogleClientId();
