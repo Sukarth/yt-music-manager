@@ -221,33 +221,46 @@ if (__DEV__) {
 
 ## Authentication Issues
 
-### Google Sign-In Fails with "Access blocked: Authorization Error"
+### Google Sign-In Fails with "Custom URI scheme is not enabled" (Error 400)
 
 **Error**: 
 ```
 Error 400: invalid_request
-Request details: redirect_uri=ytmusicmanager://
+Custom URI scheme is not enabled for your Android client.
+Request details: flowName=GeneralOAuthFlow
 ```
 
-This error occurs when the redirect URI is not properly configured in Google Cloud Console.
+This error occurs because **Google OAuth no longer supports custom URI schemes for Android apps**. This is a deliberate restriction by Google for security reasons.
 
-**Solution - Configure Google Cloud Console**:
+**Solution - Use Web Application OAuth Client with Loopback Redirect**:
+
+For Android apps, you must use a **Web Application** OAuth client (not Android client) with the loopback redirect URI:
 
 1. Go to [Google Cloud Console](https://console.cloud.google.com)
 2. Select your project
 3. Navigate to **APIs & Services** → **Credentials**
-4. Click on your OAuth 2.0 Client ID
-5. Under "Authorized redirect URIs", add the following:
-   - `ytmusicmanager://` (for production builds)
-   - `exp://localhost:19000` (for development with Expo Go)
-   - `exp://192.168.x.x:19000` (replace with your local IP for device testing)
-6. Click **Save**
+4. **Create a new OAuth 2.0 Client ID** (or modify existing):
+   - Select **"Web application"** as the application type (NOT "Android")
+   - Name it something like "YT Music Manager Android (Loopback)"
+5. Under **"Authorized redirect URIs"**, add:
+   - `http://127.0.0.1` (for loopback redirect - required for Android)
+   - `http://localhost` (optional, as an alternative)
+   
+   **Note**: Do NOT include port numbers in these URIs. Google will match any port when the base URI matches. The app dynamically uses a random available port at runtime.
+6. Click **Create** or **Save**
+7. Copy the **Client ID** and update it in `src/services/authService.ts` as `GOOGLE_WEB_CLIENT_ID`
+
+**Why Web Application client instead of Android client?**
+- Custom URI schemes (like `com.ytmusicmanager.app://`) are NOT supported by Google for Android
+- Android apps must use the loopback IP redirect (`http://127.0.0.1:port`)
+- Loopback redirects require a Web Application OAuth client, not an Android client
+- See [Google's documentation](https://developers.google.com/identity/protocols/oauth2/native-app)
 
 **Important Notes**:
-- Changes may take a few minutes to propagate
-- For Android standalone builds, you need an **Android** type OAuth client
-- The Client ID in the app must match the one in Google Cloud Console
+- The app uses `preferLocalhost: true` for Android to ensure loopback redirect
+- Changes may take a few minutes to propagate in Google Cloud Console
 - Make sure the YouTube Data API v3 is enabled in your project
+- For iOS, you still need a separate iOS-type OAuth client
 
 ### Google Sign-In Fails
 
@@ -256,9 +269,10 @@ This error occurs when the redirect URI is not properly configured in Google Clo
 **Solutions**:
 
 1. Verify Google Client ID is correct in `src/services/authService.ts`
-2. Check redirect URIs in Google Console (see above)
-3. Enable YouTube Data API v3 in Google Cloud Console
-4. Clear app data and retry
+2. For Android: Use a **Web Application** OAuth client (not Android client)
+3. Verify loopback redirect URIs are configured (see above)
+4. Enable YouTube Data API v3 in Google Cloud Console
+5. Clear app data and retry
 
 ### Token Expired
 

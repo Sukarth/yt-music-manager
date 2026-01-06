@@ -5,11 +5,12 @@ import { AuthService } from '../authService';
 jest.mock('expo-secure-store');
 jest.mock('expo-auth-session', () => ({
   AuthRequest: jest.fn(),
-  makeRedirectUri: jest.fn(() => 'ytmusicmanager://'),
+  makeRedirectUri: jest.fn(() => 'http://127.0.0.1:8080'),
 }));
 jest.mock('react-native', () => ({
   Platform: {
     select: jest.fn(obj => obj.default),
+    OS: 'android',
   },
 }));
 jest.mock('../../utils/storage', () => ({
@@ -62,7 +63,7 @@ describe('AuthService', () => {
       await expect(service.refreshAccessToken('refresh-token')).rejects.toThrow('Network error');
     });
 
-    it('should use platform-specific client ID on Android', async () => {
+    it('should use Web client ID for Android (loopback redirect)', async () => {
       const mockSelect = Platform.select as jest.Mock;
       mockSelect.mockImplementation(obj => obj.android);
 
@@ -77,6 +78,7 @@ describe('AuthService', () => {
 
       await service.refreshAccessToken('refresh-token');
 
+      // Android should use Web Client ID (same as default) for loopback redirect
       expect(mockSelect).toHaveBeenCalledWith(
         expect.objectContaining({
           android: expect.any(String),
@@ -88,7 +90,7 @@ describe('AuthService', () => {
       mockSelect.mockImplementation(obj => obj.default);
     });
 
-    it('should use platform-specific client ID on iOS', async () => {
+    it('should use iOS client ID on iOS', async () => {
       const mockSelect = Platform.select as jest.Mock;
       mockSelect.mockImplementation(obj => obj.ios);
 
