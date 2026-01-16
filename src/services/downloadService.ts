@@ -35,78 +35,78 @@ export class DownloadService {
       typeof settings?.downloadPath === 'string' &&
       settings.downloadPath.length > 0 &&
       !!(FileSystem as any).StorageAccessFramework;
-    
+
     if (isCustom) {
-       // ANDROID CUSTOM SAF LOGIC
-       // 1. Download to cache first
-       const cachePath = `${FileSystem.cacheDirectory}${fileName}`;
-       
-       if (onProgress) {
+      // ANDROID CUSTOM SAF LOGIC
+      // 1. Download to cache first
+      const cachePath = `${FileSystem.cacheDirectory}${fileName}`;
+
+      if (onProgress) {
         this.downloadCallbacks.set(track.id, onProgress);
-       }
-       
-       const downloadResumable = FileSystem.createDownloadResumable(
-          downloadUrl,
-          cachePath,
-          {},
-          downloadProgress => {
-            const totalBytes = downloadProgress.totalBytesExpectedToWrite;
-            const downloadedBytes = downloadProgress.totalBytesWritten;
+      }
 
-            const progressRaw = totalBytes > 0 ? downloadedBytes / totalBytes : 0;
-            const progress = Number.isFinite(progressRaw) ? Math.min(1, Math.max(0, progressRaw)) : 0;
-            const callback = this.downloadCallbacks.get(track.id);
-            if (callback) {
-              callback(progress, downloadedBytes, totalBytes);
-            }
-          }
-       );
-       
-       this.activeDownloads.set(track.id, downloadResumable);
-       
-       try {
-          const result = await downloadResumable.downloadAsync();
-           this.activeDownloads.delete(track.id);
-          this.downloadCallbacks.delete(track.id);
-          
-          if (!result || result.status !== 200) {
-             throw new Error(`Download failed with status ${result?.status}`);
-          }
-          
-          // 2. Read file as Base64 (needed for SAF write)
-          const fileContent = await FileSystem.readAsStringAsync(result.uri, { encoding: FileSystem.EncodingType.Base64 });
-          
-          // 3. Create file in SAF location
-          // Ensure playlist folder exists in SAF? SAF is flat or hierarchical?
-          // We stored the ROOT folder URI in settings.downloadPath
-          const rootUri: string = settings.downloadPath;
-          
-          // We can't easily make subfolders in SAF without more complex logic (iterating to find if exists).
-          // For MVP, we will save FLAT in the chosen folder, or try to create subfolder if possible.
-          // Let's save FLAT for now or try to create a subfolder for "YTMusicManager" if the root is generic.
-          
-          // Actually, implementing full SAF subfolder creation is complex. 
-          // Let's just create the file in the permitted URI.
-          
-          const mimeType = 'audio/mp4'; // m4a
-          const createdFileUri = await FileSystem.StorageAccessFramework.createFileAsync(
-            rootUri, 
-            fileName, 
-            mimeType
-          );
-          
-          await FileSystem.writeAsStringAsync(createdFileUri, fileContent, { encoding: FileSystem.EncodingType.Base64 });
-          
-          // 4. Cleanup cache
-          await FileSystem.deleteAsync(result.uri, { idempotent: true });
-          
-          return createdFileUri;
+      const downloadResumable = FileSystem.createDownloadResumable(
+        downloadUrl,
+        cachePath,
+        {},
+        downloadProgress => {
+          const totalBytes = downloadProgress.totalBytesExpectedToWrite;
+          const downloadedBytes = downloadProgress.totalBytesWritten;
 
-       } catch (error) {
-           this.activeDownloads.delete(track.id);
-           this.downloadCallbacks.delete(track.id);
-           throw error;
-       }
+          const progressRaw = totalBytes > 0 ? downloadedBytes / totalBytes : 0;
+          const progress = Number.isFinite(progressRaw) ? Math.min(1, Math.max(0, progressRaw)) : 0;
+          const callback = this.downloadCallbacks.get(track.id);
+          if (callback) {
+            callback(progress, downloadedBytes, totalBytes);
+          }
+        }
+      );
+
+      this.activeDownloads.set(track.id, downloadResumable);
+
+      try {
+        const result = await downloadResumable.downloadAsync();
+        this.activeDownloads.delete(track.id);
+        this.downloadCallbacks.delete(track.id);
+
+        if (!result || result.status !== 200) {
+          throw new Error(`Download failed with status ${result?.status}`);
+        }
+
+        // 2. Read file as Base64 (needed for SAF write)
+        const fileContent = await FileSystem.readAsStringAsync(result.uri, { encoding: FileSystem.EncodingType.Base64 });
+
+        // 3. Create file in SAF location
+        // Ensure playlist folder exists in SAF? SAF is flat or hierarchical?
+        // We stored the ROOT folder URI in settings.downloadPath
+        const rootUri: string = settings.downloadPath;
+
+        // We can't easily make subfolders in SAF without more complex logic (iterating to find if exists).
+        // For MVP, we will save FLAT in the chosen folder, or try to create subfolder if possible.
+        // Let's save FLAT for now or try to create a subfolder for "YTMusicManager" if the root is generic.
+
+        // Actually, implementing full SAF subfolder creation is complex. 
+        // Let's just create the file in the permitted URI.
+
+        const mimeType = 'audio/mp4'; // m4a
+        const createdFileUri = await FileSystem.StorageAccessFramework.createFileAsync(
+          rootUri,
+          fileName,
+          mimeType
+        );
+
+        await FileSystem.writeAsStringAsync(createdFileUri, fileContent, { encoding: FileSystem.EncodingType.Base64 });
+
+        // 4. Cleanup cache
+        await FileSystem.deleteAsync(result.uri, { idempotent: true });
+
+        return createdFileUri;
+
+      } catch (error) {
+        this.activeDownloads.delete(track.id);
+        this.downloadCallbacks.delete(track.id);
+        throw error;
+      }
 
     }
 

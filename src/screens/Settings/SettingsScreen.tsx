@@ -41,29 +41,29 @@ const SettingsScreen: React.FC = () => {
 
   const pickDownloadFolder = async () => {
     if (Platform.OS !== 'android') {
-        Alert.alert('Not Supported', 'Changing download folder is only supported on Android. On iOS, files are always in the Documents folder.');
-        return;
+      Alert.alert('Not Supported', 'Changing download folder is only supported on Android. On iOS, files are always in the Documents folder.');
+      return;
     }
 
     try {
-        const permissions = await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync();
-        if (permissions.granted) {
-            const uri = permissions.directoryUri;
-            dispatch({
-                type: 'SET_SETTINGS',
-                payload: {
-                    ...state.settings,
-                    storageLocationType: 'custom',
-                    downloadPath: uri
-                }
-            });
-            Alert.alert('Success', 'Download location updated! New downloads will be saved to the selected folder.');
-        } else {
-            // User cancelled
-        }
+      const permissions = await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync();
+      if (permissions.granted) {
+        const uri = permissions.directoryUri;
+        dispatch({
+          type: 'SET_SETTINGS',
+          payload: {
+            ...state.settings,
+            storageLocationType: 'custom',
+            downloadPath: uri
+          }
+        });
+        Alert.alert('Success', 'Download location updated! New downloads will be saved to the selected folder.');
+      } else {
+        // User cancelled
+      }
     } catch (err) {
-        console.error(err);
-        Alert.alert('Error', 'Failed to pick directory');
+      console.error(err);
+      Alert.alert('Error', 'Failed to pick directory');
     }
   };
 
