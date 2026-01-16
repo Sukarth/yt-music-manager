@@ -10,6 +10,7 @@ import {
   Dialog,
   Button,
   useTheme,
+  Chip,
 } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -32,7 +33,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const theme = useTheme();
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterMenuVisible, setFilterMenuVisible] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState<'all' | 'synced' | 'not-synced'>('all');
   const [deleteDialogVisible, setDeleteDialogVisible] = useState(false);
   const [playlistToDelete, setPlaylistToDelete] = useState<Playlist | null>(null);
@@ -95,43 +95,15 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: theme.colors.background }]}
+      edges={['top', 'left', 'right']}
+    >
       <View style={styles.header}>
         <View style={styles.headerTop}>
           <Text variant="headlineMedium" style={styles.title}>
             My Playlists
           </Text>
-          <Menu
-            visible={filterMenuVisible}
-            onDismiss={() => setFilterMenuVisible(false)}
-            anchor={
-              <IconButton icon="filter-variant" onPress={() => setFilterMenuVisible(true)} />
-            }>
-            <Menu.Item
-              onPress={() => {
-                setSelectedFilter('all');
-                setFilterMenuVisible(false);
-              }}
-              title="All Playlists"
-              leadingIcon={selectedFilter === 'all' ? 'check' : undefined}
-            />
-            <Menu.Item
-              onPress={() => {
-                setSelectedFilter('synced');
-                setFilterMenuVisible(false);
-              }}
-              title="Synced"
-              leadingIcon={selectedFilter === 'synced' ? 'check' : undefined}
-            />
-            <Menu.Item
-              onPress={() => {
-                setSelectedFilter('not-synced');
-                setFilterMenuVisible(false);
-              }}
-              title="Not Synced"
-              leadingIcon={selectedFilter === 'not-synced' ? 'check' : undefined}
-            />
-          </Menu>
         </View>
         <Searchbar
           placeholder="Search playlists"
@@ -139,6 +111,32 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           value={searchQuery}
           style={styles.searchBar}
         />
+        <View style={styles.filterContainer}>
+          <Chip
+            selected={selectedFilter === 'all'}
+            onPress={() => setSelectedFilter('all')}
+            style={styles.filterChip}
+            showSelectedOverlay
+          >
+            All
+          </Chip>
+          <Chip
+            selected={selectedFilter === 'synced'}
+            onPress={() => setSelectedFilter('synced')}
+            style={styles.filterChip}
+            showSelectedOverlay
+          >
+            Synced
+          </Chip>
+          <Chip
+            selected={selectedFilter === 'not-synced'}
+            onPress={() => setSelectedFilter('not-synced')}
+            style={styles.filterChip}
+            showSelectedOverlay
+          >
+            Not Synced
+          </Chip>
+        </View>
       </View>
 
       {filteredPlaylists.length === 0 ? (
@@ -153,14 +151,22 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         <FlatList
           data={filteredPlaylists}
           keyExtractor={item => item.id}
-          renderItem={({ item }) => (
-            <PlaylistCard
-              playlist={item}
-              onPress={() => navigation.navigate('PlaylistDetail', { playlistId: item.id })}
-              onSync={() => handleSyncPlaylist(item)}
-              onDelete={() => handleDeletePlaylist(item)}
-            />
-          )}
+          renderItem={({ item }) => {
+            const downloadedTracks = state.tracks.filter(
+              t => t.playlistId === item.id && t.downloadStatus === 'completed'
+            );
+            const downloadedSize = downloadedTracks.reduce((sum, t) => sum + (t.fileSize || 0), 0);
+            return (
+              <PlaylistCard
+                playlist={item}
+                downloadedCount={downloadedTracks.length}
+                downloadedSize={downloadedSize}
+                onPress={() => navigation.navigate('PlaylistDetail', { playlistId: item.id })}
+                onSync={() => handleSyncPlaylist(item)}
+                onDelete={() => handleDeletePlaylist(item)}
+              />
+            );
+          }}
           contentContainerStyle={styles.listContent}
         />
       )}
@@ -199,7 +205,7 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 16,
-    paddingTop: 16,
+    paddingTop: 17,
   },
   headerTop: {
     flexDirection: 'row',
@@ -210,8 +216,17 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   searchBar: {
-    marginTop: 16,
+    marginTop: 22,
     marginBottom: 8,
+  },
+  filterContainer: {
+    flexDirection: 'row',
+    marginTop: 8,
+    marginBottom: 8,
+    gap: 8,
+  },
+  filterChip: {
+    // flex: 1, // Optional: if you want them to share space equally
   },
   listContent: {
     paddingBottom: 80,

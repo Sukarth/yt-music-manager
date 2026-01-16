@@ -33,7 +33,8 @@ export interface DownloadQueueItem {
 }
 
 export interface AppSettings {
-  downloadPath: string;
+  downloadPath: string; // Internal use. If custom, this is the URI.
+  storageLocationType: 'internal' | 'custom'; // New field
   audioQuality: 128 | 192 | 256 | 320;
   autoSyncInterval: 1 | 3 | 6 | 12 | 24;
   maxConcurrentDownloads: number;
@@ -75,13 +76,23 @@ export interface AppState {
 
 export type RootStackParamList = {
   MainTabs: undefined;
-  AddPlaylist: undefined;
-  PlaylistDetail: { playlistId: string };
+  AddPlaylist: { playlistId?: string } | undefined;
+  PlaylistDetail: { playlistId: string; autoDownload?: boolean };
   Player: { trackId: string };
   SyncPreview: { playlistId: string };
 };
 
 export type MainTabParamList = {
   Home: undefined;
+  MyPlaylists: undefined;
   Settings: undefined;
 };
+
+export interface CloudPlaylist {
+  id: string;
+  title: string;
+  description: string;
+  thumbnailUrl: string;
+  itemCount: number;
+  privacy: 'public' | 'unlisted' | 'private';
+}

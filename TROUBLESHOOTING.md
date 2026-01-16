@@ -490,7 +490,7 @@ const calculateStorage = async () => {
 xcrun xctrace record --device <device-id> --template 'Memory'
 
 # Android
-adb shell dumpsys meminfo com.ytmusicmanager.app
+adb shell dumpsys meminfo com.sukarth.ytmusicmanager
 ```
 
 2. Fix memory leaks

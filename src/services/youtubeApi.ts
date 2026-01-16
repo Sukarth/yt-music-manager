@@ -1,4 +1,5 @@
 import axios from 'axios';
+import * as SecureStore from 'expo-secure-store';
 import { BACKEND_URL } from '../constants';
 
 export interface YouTubePlaylistInfo {
@@ -105,6 +106,39 @@ export class YouTubeApiService {
     } catch (error) {
       console.error('Error fetching playlist videos:', error);
       throw new Error('Failed to fetch playlist videos');
+    }
+  }
+
+  async getUserPlaylists(token?: string): Promise<import('../types').CloudPlaylist[]> {
+    try {
+      // Get access token from argument or storage
+      let accessToken = token;
+      if (!accessToken) {
+        accessToken = await SecureStore.getItemAsync('access_token');
+      }
+
+      if (!accessToken) {
+        throw new Error('Not authenticated. Please sign in with Google.');
+      }
+
+      const response = await fetch(`${BACKEND_URL}/api/user-playlists`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to fetch user playlists');
+      }
+
+      const data = await response.json();
+      return data.playlists || [];
+    } catch (error) {
+      console.error('Error fetching user playlists:', error);
+      throw error;
     }
   }
 }

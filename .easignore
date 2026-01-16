@@ -1,0 +1,70 @@
+# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
+
+# dependencies
+node_modules/
+
+# Expo
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+
+# Native
+.kotlin/
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.keystore
+
+# Metro
+.metro-health-check*
+
+# debug
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# macOS
+.DS_Store
+*.pem
+
+# local env files
+.env
+.env*.local
+
+# typescript
+*.tsbuildinfo
+
+# generated native folders
+/ios
+/android
+
+# Test coverage
+coverage/
+*.lcov
+
+# IDE
+.vscode/
+
+# Build artifacts
+*.apk
+*.ipa
+*.aab
+
+# Sensitive files - BUT ALLOWED FOR EAS BUILD
+# These are compiled into the app, so they must be uploaded to EAS.
+# Since this is .easignore, NOT .gitignore, excluding them here means "Don't ignore them for EAS".
+# We want EAS to see them, so we DO NOT list them here.
+
+# android-service-account.json # If you use this for submission, you might want to secret it.
+# google-services.json # WE WANT THIS UPLOADED TO EAS
+# GoogleService-Info.plist # WE WANT THIS UPLOADED TO EAS
+
+keystore_base64.txt
+github_secrets.txt
+
+# OS
+Thumbs.db

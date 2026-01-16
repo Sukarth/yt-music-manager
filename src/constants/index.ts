@@ -1,8 +1,9 @@
 export const DEFAULT_SETTINGS = {
   downloadPath: '',
+  storageLocationType: 'internal' as const, // Default to internal
   audioQuality: 192 as const,
   autoSyncInterval: 6 as const,
-  maxConcurrentDownloads: 3,
+  maxConcurrentDownloads: 10,
   autoSyncEnabled: true,
   storageCleanupEnabled: false,
   theme: 'auto' as const,
@@ -39,4 +40,4 @@ export const RETRY_DELAY_MS = 2000;
 export const YOUTUBE_PLAYLIST_REGEX =
   /(?:youtube\.com\/(?:playlist\?list=|watch\?v=.*&list=)|youtu\.be\/.*\?list=)([a-zA-Z0-9_-]+)/;
 
-export const BACKEND_URL = 'https://yt-music-manager-backend.onrender.com';
+export const BACKEND_URL = 'https://1wd12358-3000.euw.devtunnels.ms';

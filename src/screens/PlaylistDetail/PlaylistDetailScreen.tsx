@@ -8,11 +8,13 @@ import {
   IconButton,
   ProgressBar,
   useTheme,
+  Chip,
 } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
 import { useAppContext } from '../../store/AppContext';
+import { usePlaylistManager } from '../../hooks/usePlaylistManager';
 import { useDownloadManager } from '../../hooks/useDownloadManager';
 import TrackItem from '../../components/playlist/TrackItem';
 import { RootStackParamList, Track } from '../../types';
@@ -25,23 +27,37 @@ type PlaylistDetailScreenNavigationProp = NativeStackNavigationProp<
 
 type PlaylistDetailScreenRouteProp = RouteProp<RootStackParamList, 'PlaylistDetail'>;
 
-interface PlaylistDetailScreenProps {
+type PlaylistDetailScreenProps = {
   navigation: PlaylistDetailScreenNavigationProp;
   route: PlaylistDetailScreenRouteProp;
-}
+};
 
 const PlaylistDetailScreen: React.FC<PlaylistDetailScreenProps> = ({ navigation, route }) => {
-  const { playlistId } = route.params;
+  const { playlistId, autoDownload } = route.params;
   const { state } = useAppContext();
-  const { downloadTrack, downloadPlaylist, cancelDownload } = useDownloadManager();
+  // Added: usePlaylistManager to get removePlaylist functionality
+  const { removePlaylist } = usePlaylistManager();
+
+  const { downloadTrack, downloadPlaylist, syncPlaylist, cancelDownload } = useDownloadManager();
   const theme = useTheme();
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterMenuVisible, setFilterMenuVisible] = useState(false);
+  const [optionsMenuVisible, setOptionsMenuVisible] = useState(false); // New menu for options like delete
   const [selectedFilter, setSelectedFilter] = useState<'all' | 'downloaded' | 'pending'>('all');
   const [isDownloading, setIsDownloading] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   const playlist = state.playlists.find(p => p.id === playlistId);
+
+  // Auto-download trigger
+  React.useEffect(() => {
+    if (autoDownload && playlist && !isDownloading) {
+      handleSync();
+      // Reset params so it doesn't loop if we go back and forth (though params usually persist)
+      navigation.setParams({ autoDownload: undefined });
+    }
+  }, [autoDownload, playlist]);
+
   const tracks = state.tracks
     .filter(t => t.playlistId === playlistId)
     .filter(track => {
@@ -66,6 +82,29 @@ const PlaylistDetailScreen: React.FC<PlaylistDetailScreenProps> = ({ navigation,
 
   const totalSize = downloadedTracks.reduce((sum, track) => sum + track.fileSize, 0);
 
+  const handleSync = async () => {
+    setIsDownloading(true);
+    setIsSyncing(true);
+    try {
+      const result = await syncPlaylist(playlistId);
+      if (result.failed === 0) {
+        Alert.alert('Sync Complete', `Successfully synced ${result.success} tracks!`);
+      } else if (result.success === 0) {
+        Alert.alert('Sync Error', `Failed to sync. ${result.failed} tracks failed.`);
+      } else {
+        Alert.alert(
+          'Partially Complete',
+          `Synced ${result.success} tracks.\n${result.failed} tracks failed.`
+        );
+      }
+    } catch {
+      Alert.alert('Error', 'Failed to sync playlist.');
+    } finally {
+      setIsDownloading(false);
+      setIsSyncing(false);
+    }
+  };
+
   const handleDownloadAll = async () => {
     Alert.alert('Download All', 'Download all tracks in this playlist?', [
       { text: 'Cancel', style: 'cancel' },
@@ -74,10 +113,19 @@ const PlaylistDetailScreen: React.FC<PlaylistDetailScreenProps> = ({ navigation,
         onPress: async () => {
           setIsDownloading(true);
           try {
-            await downloadPlaylist(playlistId);
-            Alert.alert('Success', 'All tracks downloaded successfully!');
+            const result = await downloadPlaylist(playlistId);
+            if (result.failed === 0) {
+              Alert.alert('Success', `All ${result.success} tracks downloaded successfully!`);
+            } else if (result.success === 0) {
+              Alert.alert('Error', `Failed to download all ${result.failed} tracks.`);
+            } else {
+              Alert.alert(
+                'Partially Complete',
+                `Downloaded ${result.success} tracks.\n${result.failed} tracks failed to download.`
+              );
+            }
           } catch {
-            Alert.alert('Error', 'Failed to download some tracks.');
+            Alert.alert('Error', 'Failed to download playlist.');
           } finally {
             setIsDownloading(false);
           }
@@ -102,6 +150,44 @@ const PlaylistDetailScreen: React.FC<PlaylistDetailScreenProps> = ({ navigation,
     }
   };
 
+  const handleRemovePlaylist = async () => {
+    setOptionsMenuVisible(false);
+    Alert.alert(
+      'Remove Playlist',
+      'Are you sure you want to remove this playlist?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: () => {
+            Alert.alert(
+              'Delete Files?',
+              'Do you also want to delete the downloaded files for this playlist?',
+              [
+                {
+                  text: 'Keep Files',
+                  onPress: async () => {
+                    await removePlaylist(playlistId, false);
+                    navigation.goBack();
+                  }
+                },
+                {
+                  text: 'Delete Files',
+                  style: 'destructive',
+                  onPress: async () => {
+                    await removePlaylist(playlistId, true);
+                    navigation.goBack();
+                  }
+                }
+              ]
+            );
+          }
+        }
+      ]
+    );
+  };
+
   if (!playlist) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
@@ -110,12 +196,29 @@ const PlaylistDetailScreen: React.FC<PlaylistDetailScreenProps> = ({ navigation,
     );
   }
 
+  const isPlaylistDownloading = playlist?.syncStatus === 'downloading' || playlist?.syncStatus === 'syncing' || isDownloading;
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <View style={styles.header}>
-        <Text variant="headlineSmall" numberOfLines={2}>
-          {playlist.name}
-        </Text>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <Text variant="headlineSmall" numberOfLines={2} style={{ flex: 1, marginRight: 8 }}>
+            {playlist.name}
+          </Text>
+          <Menu
+            visible={optionsMenuVisible}
+            onDismiss={() => setOptionsMenuVisible(false)}
+            anchor={
+              <IconButton icon="dots-vertical" onPress={() => setOptionsMenuVisible(true)} />
+            }>
+            <Menu.Item
+              onPress={handleRemovePlaylist}
+              title="Remove Playlist"
+              leadingIcon="delete"
+              titleStyle={{ color: theme.colors.error }}
+            />
+          </Menu>
+        </View>
         {playlist.description && (
           <Text variant="bodySmall" numberOfLines={3} style={styles.description}>
             {playlist.description}
@@ -136,45 +239,35 @@ const PlaylistDetailScreen: React.FC<PlaylistDetailScreenProps> = ({ navigation,
         </View>
 
         <View style={styles.actionsRow}>
-          <Button
-            mode="contained"
-            onPress={handleDownloadAll}
-            disabled={isDownloading}
-            style={styles.downloadButton}>
-            Download All
-          </Button>
-          <Menu
-            visible={filterMenuVisible}
-            onDismiss={() => setFilterMenuVisible(false)}
-            anchor={
-              <IconButton icon="filter-variant" onPress={() => setFilterMenuVisible(true)} />
-            }>
-            <Menu.Item
-              onPress={() => {
-                setSelectedFilter('all');
-                setFilterMenuVisible(false);
-              }}
-              title="All Tracks"
-              leadingIcon={selectedFilter === 'all' ? 'check' : undefined}
-            />
-            <Menu.Item
-              onPress={() => {
-                setSelectedFilter('downloaded');
-                setFilterMenuVisible(false);
-              }}
-              title="Downloaded"
-              leadingIcon={selectedFilter === 'downloaded' ? 'check' : undefined}
-            />
-            <Menu.Item
-              onPress={() => {
-                setSelectedFilter('pending');
-                setFilterMenuVisible(false);
-              }}
-              title="Pending"
-              leadingIcon={selectedFilter === 'pending' ? 'check' : undefined}
-            />
-          </Menu>
+          {playlist.syncStatus === 'completed' || downloadedTracks.length > 0 ? (
+            <Button
+              mode="contained"
+              onPress={handleSync}
+              disabled={isDownloading}
+              style={styles.downloadButton}
+              icon="sync">
+              Sync Playlist
+            </Button>
+          ) : (
+            <Button
+              mode="contained"
+              onPress={handleDownloadAll}
+              disabled={isDownloading}
+              style={styles.downloadButton}
+              icon="download">
+              Download All
+            </Button>
+          )}
         </View>
+
+        {isPlaylistDownloading && (
+          <View style={styles.downloadingContainer}>
+            <ProgressBar indeterminate color={theme.colors.primary} style={styles.progressBar} />
+            <Text variant="bodySmall" style={styles.downloadingText}>
+              {isSyncing ? 'Syncing playlist...' : 'Downloading playlist...'}
+            </Text>
+          </View>
+        )}
 
         <Searchbar
           placeholder="Search tracks"
@@ -182,16 +275,34 @@ const PlaylistDetailScreen: React.FC<PlaylistDetailScreenProps> = ({ navigation,
           value={searchQuery}
           style={styles.searchBar}
         />
-      </View>
 
-      {isDownloading && (
-        <View style={styles.downloadingContainer}>
-          <ProgressBar indeterminate color={theme.colors.primary} />
-          <Text variant="bodySmall" style={styles.downloadingText}>
-            Downloading playlist...
-          </Text>
+        <View style={styles.filterContainer}>
+          <Chip
+            selected={selectedFilter === 'all'}
+            onPress={() => setSelectedFilter('all')}
+            style={styles.filterChip}
+            showSelectedOverlay
+          >
+            All
+          </Chip>
+          <Chip
+            selected={selectedFilter === 'downloaded'}
+            onPress={() => setSelectedFilter('downloaded')}
+            style={styles.filterChip}
+            showSelectedOverlay
+          >
+            Downloaded
+          </Chip>
+          <Chip
+            selected={selectedFilter === 'pending'}
+            onPress={() => setSelectedFilter('pending')}
+            style={styles.filterChip}
+            showSelectedOverlay
+          >
+            Pending
+          </Chip>
         </View>
-      )}
+      </View>
 
       <FlatList
         data={tracks}
@@ -199,10 +310,13 @@ const PlaylistDetailScreen: React.FC<PlaylistDetailScreenProps> = ({ navigation,
         renderItem={({ item }) => (
           <TrackItem
             track={item}
-            onPress={() =>
-              item.downloadStatus === 'completed' &&
-              navigation.navigate('Player', { trackId: item.id })
-            }
+            onPress={() => {
+              if (item.downloadStatus === 'completed') {
+                navigation.navigate('Player', { trackId: item.id });
+              } else {
+                Alert.alert('Not Downloaded', 'This track needs to be downloaded before playing.');
+              }
+            }}
             onDownload={() => handleDownloadTrack(item)}
             onCancel={() => handleCancelDownload(item.id)}
           />
@@ -252,8 +366,24 @@ const styles = StyleSheet.create({
   searchBar: {
     marginTop: 12,
   },
+  filterContainer: {
+    flexDirection: 'row',
+    marginTop: 12,
+    gap: 8,
+  },
+  filterChip: {
+    // flex: 1, // Optional: if you want them to share space equally
+  },
   downloadingContainer: {
-    padding: 16,
+    marginTop: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+    backgroundColor: 'rgba(0, 0, 0, 0.03)',
+    borderRadius: 8,
+  },
+  progressBar: {
+    height: 6,
+    borderRadius: 3,
   },
   downloadingText: {
     marginTop: 8,

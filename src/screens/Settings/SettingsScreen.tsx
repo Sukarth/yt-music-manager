@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, ScrollView, Alert } from 'react-native';
+import { StyleSheet, ScrollView, Alert, Linking, Platform } from 'react-native';
 import {
   List,
   Switch,
@@ -11,14 +11,14 @@ import {
   useTheme,
 } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as FileSystem from 'expo-file-system/legacy';
 import { useAppContext } from '../../store/AppContext';
 import { authService } from '../../services/authService';
 import { AUDIO_QUALITY_OPTIONS, AUTO_SYNC_INTERVAL_OPTIONS } from '../../constants';
 import { formatFileSize } from '../../utils/formatters';
-import * as FileSystem from 'expo-file-system';
 
 const getDocumentDirectory = (): string => {
-  return (FileSystem as any).documentDirectory || 'file:///';
+  return FileSystem.documentDirectory || 'file:///';
 };
 
 const SettingsScreen: React.FC = () => {
@@ -37,33 +37,42 @@ const SettingsScreen: React.FC = () => {
 
   React.useEffect(() => {
     calculateStorageUsage();
-  }, []);
+  }, [state.tracks]); // Recalculate when tracks change
+
+  const pickDownloadFolder = async () => {
+    if (Platform.OS !== 'android') {
+        Alert.alert('Not Supported', 'Changing download folder is only supported on Android. On iOS, files are always in the Documents folder.');
+        return;
+    }
+
+    try {
+        const permissions = await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync();
+        if (permissions.granted) {
+            const uri = permissions.directoryUri;
+            dispatch({
+                type: 'SET_SETTINGS',
+                payload: {
+                    ...state.settings,
+                    storageLocationType: 'custom',
+                    downloadPath: uri
+                }
+            });
+            Alert.alert('Success', 'Download location updated! New downloads will be saved to the selected folder.');
+        } else {
+            // User cancelled
+        }
+    } catch (err) {
+        console.error(err);
+        Alert.alert('Error', 'Failed to pick directory');
+    }
+  };
 
   const calculateStorageUsage = async () => {
     try {
-      const basePath = `${getDocumentDirectory()}YTMusicManager/`;
-      const dirInfo = await FileSystem.getInfoAsync(basePath);
-
-      if (!dirInfo.exists) {
-        setStorageUsed(0);
-        return;
-      }
-
-      let totalSize = 0;
-      const playlists = await FileSystem.readDirectoryAsync(basePath);
-
-      for (const playlist of playlists) {
-        const playlistPath = `${basePath}${playlist}`;
-        const files = await FileSystem.readDirectoryAsync(playlistPath);
-
-        for (const file of files) {
-          const filePath = `${playlistPath}/${file}`;
-          const fileInfo = await FileSystem.getInfoAsync(filePath);
-          if (fileInfo.exists && !fileInfo.isDirectory) {
-            totalSize += fileInfo.size || 0;
-          }
-        }
-      }
+      // Calculate from state.tracks which has up-to-date fileSize info
+      const totalSize = state.tracks
+        .filter(t => t.downloadStatus === 'completed' && t.fileSize > 0)
+        .reduce((sum, track) => sum + track.fileSize, 0);
 
       setStorageUsed(totalSize);
     } catch (error) {
@@ -98,11 +107,11 @@ const SettingsScreen: React.FC = () => {
     ]);
   };
 
-  const handleClearCache = async () => {
-    Alert.alert('Clear Cache', 'This will delete all downloaded music files. Are you sure?', [
+  const handleDeleteDownloadedFiles = async () => {
+    Alert.alert('Delete Downloaded Files', 'This will delete all downloaded music files. Are you sure?', [
       { text: 'Cancel', style: 'cancel' },
       {
-        text: 'Clear',
+        text: 'Delete',
         style: 'destructive',
         onPress: async () => {
           try {
@@ -112,9 +121,9 @@ const SettingsScreen: React.FC = () => {
               await FileSystem.deleteAsync(basePath, { idempotent: true });
             }
             setStorageUsed(0);
-            Alert.alert('Success', 'Cache cleared successfully!');
+            Alert.alert('Success', 'Downloaded files deleted successfully!');
           } catch {
-            Alert.alert('Error', 'Failed to clear cache.');
+            Alert.alert('Error', 'Failed to delete downloaded files.');
           }
         },
       },
@@ -146,7 +155,10 @@ const SettingsScreen: React.FC = () => {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: theme.colors.background }]}
+      edges={['top', 'left', 'right']}
+    >
       <ScrollView>
         <List.Section>
           <List.Subheader>Authentication</List.Subheader>
@@ -155,11 +167,11 @@ const SettingsScreen: React.FC = () => {
               <List.Item
                 title="Signed In"
                 description={state.auth.userEmail || 'Google Account'}
-                left={props => <List.Icon {...props} icon="account-check" />}
+                left={(props: any) => <List.Icon {...props} icon="account-check" />}
               />
               <List.Item
                 title="Sign Out"
-                left={props => <List.Icon {...props} icon="logout" />}
+                left={(props: any) => <List.Icon {...props} icon="logout" />}
                 onPress={handleSignOut}
               />
             </>
@@ -168,11 +180,11 @@ const SettingsScreen: React.FC = () => {
               <List.Item
                 title="Not Signed In"
                 description="Sign in to access private playlists"
-                left={props => <List.Icon {...props} icon="account-alert" />}
+                left={(props: any) => <List.Icon {...props} icon="account-alert" />}
               />
               <List.Item
                 title="Sign In with Google"
-                left={props => <List.Icon {...props} icon="google" />}
+                left={(props: any) => <List.Icon {...props} icon="google" />}
                 onPress={handleSignIn}
               />
             </>
@@ -184,10 +196,21 @@ const SettingsScreen: React.FC = () => {
         <List.Section>
           <List.Subheader>Download Settings</List.Subheader>
           <List.Item
+            title="Download Folder"
+            description={
+              state.settings.storageLocationType === 'custom'
+                ? 'Custom folder (tap to change)'
+                : 'App internal storage (private)'
+            }
+            left={(props: any) => <List.Icon {...props} icon="folder" />}
+            right={(props: any) => <List.Icon {...props} icon="chevron-right" />}
+            onPress={pickDownloadFolder}
+          />
+          <List.Item
             title="Audio Quality"
             description={`${state.settings.audioQuality} kbps`}
-            left={props => <List.Icon {...props} icon="music-note" />}
-            right={props => <List.Icon {...props} icon="chevron-right" />}
+            left={(props: any) => <List.Icon {...props} icon="music-note" />}
+            right={(props: any) => <List.Icon {...props} icon="chevron-right" />}
             onPress={() => {
               setSelectedQuality(state.settings.audioQuality);
               setQualityDialogVisible(true);
@@ -196,8 +219,8 @@ const SettingsScreen: React.FC = () => {
           <List.Item
             title="Concurrent Downloads"
             description={`${state.settings.maxConcurrentDownloads} simultaneous downloads`}
-            left={props => <List.Icon {...props} icon="download-multiple" />}
-            right={props => <List.Icon {...props} icon="chevron-right" />}
+            left={(props: any) => <List.Icon {...props} icon="download-multiple" />}
+            right={(props: any) => <List.Icon {...props} icon="chevron-right" />}
             onPress={() => {
               setSelectedConcurrent(state.settings.maxConcurrentDownloads);
               setConcurrentDialogVisible(true);
@@ -248,26 +271,32 @@ const SettingsScreen: React.FC = () => {
             left={props => <List.Icon {...props} icon="database" />}
           />
           <List.Item
-            title="Clear Cache"
-            description="Delete all downloaded files"
+            title="Delete Downloaded Files"
+            description="Remove all downloaded songs from storage"
             left={props => <List.Icon {...props} icon="delete" />}
-            onPress={handleClearCache}
+            onPress={handleDeleteDownloadedFiles}
           />
         </List.Section>
 
         <Divider />
 
         <List.Section>
-          <List.Subheader>About</List.Subheader>
+          <List.Subheader>About YT Music Manager</List.Subheader>
           <List.Item
             title="Version"
             description="1.0.0"
             left={props => <List.Icon {...props} icon="information" />}
           />
           <List.Item
-            title="YT Music Manager"
-            description="Download and manage YouTube Music playlists"
-            left={props => <List.Icon {...props} icon="music-box" />}
+            title="Author"
+            description="Sukarth Acharya"
+            left={props => <List.Icon {...props} icon="account" />}
+          />
+          <List.Item
+            title="View on GitHub"
+            description="Open the project repository"
+            left={props => <List.Icon {...props} icon="github" />}
+            onPress={() => Linking.openURL('https://github.com/Sukarth/yt-music-manager')}
           />
         </List.Section>
       </ScrollView>

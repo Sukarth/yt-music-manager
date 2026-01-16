@@ -1,13 +1,25 @@
-import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Image } from 'react-native';
-import { Text, IconButton, ProgressBar, useTheme } from 'react-native-paper';
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  View,
+  StyleSheet,
+  Image,
+  Dimensions,
+  TouchableOpacity,
+  Animated,
+  PanResponder,
+} from 'react-native';
+import { Text, IconButton, useTheme, Surface } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Audio } from 'expo-av';
 import { RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAppContext } from '../../store/AppContext';
+import { usePlayer } from '../../hooks/usePlayer';
 import { RootStackParamList } from '../../types';
 import { formatDuration } from '../../utils/formatters';
+import QueueModal from '../../components/player/QueueModal';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const SEEKBAR_WIDTH = SCREEN_WIDTH - 48;
 
 type PlayerScreenRouteProp = RouteProp<RootStackParamList, 'Player'>;
 type PlayerScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Player'>;
@@ -19,111 +31,93 @@ interface PlayerScreenProps {
 
 const PlayerScreen: React.FC<PlayerScreenProps> = ({ route, navigation }) => {
   const { trackId } = route.params;
-  const { state, dispatch } = useAppContext();
+  const { state } = useAppContext();
   const theme = useTheme();
+  const [queueVisible, setQueueVisible] = useState(false);
+  const [isSeeking, setIsSeeking] = useState(false);
+  const [seekPosition, setSeekPosition] = useState(0);
+  const seekAnimValue = useRef(new Animated.Value(0)).current;
 
-  const [sound, setSound] = useState<Audio.Sound | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [position, setPosition] = useState(0);
-  const [duration, setDuration] = useState(0);
-  const [isLoading, setIsLoading] = useState(false);
+  const {
+    currentTrack,
+    isPlaying,
+    isLoading,
+    position,
+    duration,
+    repeatMode,
+    shuffleEnabled,
+    queue,
+    currentIndex,
+    loadTrack,
+    togglePlayPause,
+    playNext,
+    playPrevious,
+    seekTo,
+    toggleRepeatMode,
+    toggleShuffle,
+    canPlayNext,
+    canPlayPrevious,
+  } = usePlayer();
 
   const track = state.tracks.find(t => t.id === trackId);
   const playlistTracks = track
     ? state.tracks
-        .filter(t => t.playlistId === track.playlistId && t.downloadStatus === 'completed')
-        .sort((a, b) => a.position - b.position)
+      .filter(t => t.playlistId === track.playlistId && t.downloadStatus === 'completed')
+      .sort((a, b) => a.position - b.position)
     : [];
-  const currentIndex = playlistTracks.findIndex(t => t.id === trackId);
 
+  // Load track if not already playing
   useEffect(() => {
-    loadAndPlayTrack();
-
-    return () => {
-      if (sound) {
-        sound.unloadAsync();
-      }
-    };
+    if (track && (!currentTrack || currentTrack.id !== track.id)) {
+      const startIndex = playlistTracks.findIndex(t => t.id === track.id);
+      loadTrack(track, playlistTracks, startIndex >= 0 ? startIndex : 0);
+    }
   }, [trackId]);
 
+  // Update navigation params when track changes
   useEffect(() => {
-    if (track) {
-      dispatch({ type: 'SET_CURRENT_PLAYING_TRACK', payload: track });
+    if (currentTrack && currentTrack.id !== trackId) {
+      navigation.setParams({ trackId: currentTrack.id });
     }
+  }, [currentTrack?.id]);
 
-    return () => {
-      dispatch({ type: 'SET_CURRENT_PLAYING_TRACK', payload: null });
-    };
-  }, [track]);
+  // Seekbar pan responder
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderGrant: (evt) => {
+        setIsSeeking(true);
+        const x = evt.nativeEvent.locationX;
+        const progress = Math.max(0, Math.min(1, x / SEEKBAR_WIDTH));
+        setSeekPosition(progress * duration);
+        seekAnimValue.setValue(progress);
+      },
+      onPanResponderMove: (evt, gestureState) => {
+        const x = Math.max(0, Math.min(SEEKBAR_WIDTH, gestureState.moveX - 24));
+        const progress = x / SEEKBAR_WIDTH;
+        setSeekPosition(progress * duration);
+        seekAnimValue.setValue(progress);
+      },
+      onPanResponderRelease: async () => {
+        setIsSeeking(false);
+        await seekTo(seekPosition);
+      },
+    })
+  ).current;
 
-  const loadAndPlayTrack = async () => {
-    if (!track || !track.filePath) return;
+  const displayPosition = isSeeking ? seekPosition : position;
+  const progress = duration > 0 ? displayPosition / duration : 0;
 
-    setIsLoading(true);
-
-    try {
-      if (sound) {
-        await sound.unloadAsync();
-      }
-
-      const { sound: newSound } = await Audio.Sound.createAsync(
-        { uri: track.filePath },
-        { shouldPlay: true },
-        onPlaybackStatusUpdate
-      );
-
-      setSound(newSound);
-      setIsPlaying(true);
-      setIsLoading(false);
-    } catch (error) {
-      console.error('Error loading track:', error);
-      setIsLoading(false);
+  const getRepeatIcon = () => {
+    switch (repeatMode) {
+      case 'one':
+        return 'repeat-once';
+      case 'all':
+        return 'repeat';
+      default:
+        return 'repeat-off';
     }
-  };
-
-  const onPlaybackStatusUpdate = (status: any) => {
-    if (status.isLoaded) {
-      setPosition(status.positionMillis / 1000);
-      setDuration(status.durationMillis / 1000);
-      setIsPlaying(status.isPlaying);
-
-      if (status.didJustFinish) {
-        handleNext();
-      }
-    }
-  };
-
-  const handlePlayPause = async () => {
-    if (!sound) return;
-
-    if (isPlaying) {
-      await sound.pauseAsync();
-    } else {
-      await sound.playAsync();
-    }
-  };
-
-  const handleNext = () => {
-    if (currentIndex < playlistTracks.length - 1) {
-      const nextTrack = playlistTracks[currentIndex + 1];
-      if (nextTrack) {
-        navigation.setParams({ trackId: nextTrack.id });
-      }
-    }
-  };
-
-  const handlePrevious = () => {
-    if (currentIndex > 0) {
-      const previousTrack = playlistTracks[currentIndex - 1];
-      if (previousTrack) {
-        navigation.setParams({ trackId: previousTrack.id });
-      }
-    }
-  };
-
-  const _handleSeek = async (value: number) => {
-    if (!sound) return;
-    await sound.setPositionAsync(value * 1000);
   };
 
   if (!track) {
@@ -145,58 +139,146 @@ const PlayerScreen: React.FC<PlayerScreenProps> = ({ route, navigation }) => {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <View style={styles.content}>
-        {track.thumbnailUrl && (
-          <Image source={{ uri: track.thumbnailUrl }} style={styles.artwork} />
-        )}
+        {/* Artwork */}
+        <View style={styles.artworkContainer}>
+          {(currentTrack?.thumbnailUrl || track.thumbnailUrl) ? (
+            <Image
+              source={{ uri: currentTrack?.thumbnailUrl || track.thumbnailUrl }}
+              style={styles.artwork}
+            />
+          ) : (
+            <View
+              style={[
+                styles.artwork,
+                styles.placeholderArtwork,
+                { backgroundColor: theme.colors.surfaceVariant },
+              ]}
+            >
+              <IconButton icon="music-note" size={80} />
+            </View>
+          )}
+        </View>
 
+        {/* Track Info */}
         <View style={styles.info}>
-          <Text variant="headlineMedium" style={styles.title}>
-            {track.title}
+          <Text variant="headlineSmall" style={styles.title} numberOfLines={2}>
+            {currentTrack?.title || track.title}
           </Text>
-          <Text variant="titleMedium" style={styles.artist}>
-            {track.artist}
+          <Text variant="titleMedium" style={[styles.artist, { color: theme.colors.onSurfaceVariant }]}>
+            {currentTrack?.artist || track.artist}
           </Text>
         </View>
 
-        <View style={styles.progressContainer}>
-          <ProgressBar
-            progress={duration > 0 ? position / duration : 0}
-            color={theme.colors.primary}
-            style={styles.progressBar}
-          />
+        {/* Seekbar */}
+        <View style={styles.seekbarContainer}>
+          <View
+            style={[styles.seekbarTrack, { backgroundColor: theme.colors.surfaceVariant }]}
+            {...panResponder.panHandlers}
+          >
+            <View
+              style={[
+                styles.seekbarProgress,
+                {
+                  backgroundColor: theme.colors.primary,
+                  width: `${progress * 100}%`,
+                },
+              ]}
+            />
+            <View
+              style={[
+                styles.seekbarThumb,
+                {
+                  backgroundColor: theme.colors.primary,
+                  left: progress * SEEKBAR_WIDTH - 8,
+                },
+              ]}
+            />
+          </View>
           <View style={styles.timeContainer}>
-            <Text variant="bodySmall">{formatDuration(position)}</Text>
-            <Text variant="bodySmall">{formatDuration(duration)}</Text>
+            <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+              {formatDuration(displayPosition)}
+            </Text>
+            <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+              {formatDuration(duration)}
+            </Text>
           </View>
         </View>
 
-        <View style={styles.controls}>
+        {/* Main Controls */}
+        <View style={styles.mainControls}>
+          <IconButton
+            icon={shuffleEnabled ? 'shuffle' : 'shuffle-disabled'}
+            size={24}
+            onPress={toggleShuffle}
+            iconColor={shuffleEnabled ? theme.colors.primary : theme.colors.onSurfaceVariant}
+          />
           <IconButton
             icon="skip-previous"
-            size={36}
-            onPress={handlePrevious}
-            disabled={currentIndex === 0}
+            size={40}
+            onPress={playPrevious}
+            disabled={!canPlayPrevious}
+            iconColor={theme.colors.onSurface}
           />
-          <IconButton
-            icon={isPlaying ? 'pause-circle' : 'play-circle'}
-            size={64}
-            onPress={handlePlayPause}
-            disabled={isLoading}
-          />
+          <Surface style={[styles.playButton, { backgroundColor: theme.colors.primary }]} elevation={4}>
+            <IconButton
+              icon={isPlaying ? 'pause' : 'play'}
+              size={40}
+              onPress={togglePlayPause}
+              disabled={isLoading}
+              iconColor={theme.colors.onPrimary}
+            />
+          </Surface>
           <IconButton
             icon="skip-next"
-            size={36}
-            onPress={handleNext}
-            disabled={currentIndex === playlistTracks.length - 1}
+            size={40}
+            onPress={playNext}
+            disabled={!canPlayNext}
+            iconColor={theme.colors.onSurface}
+          />
+          <IconButton
+            icon={getRepeatIcon()}
+            size={24}
+            onPress={toggleRepeatMode}
+            iconColor={repeatMode !== 'off' ? theme.colors.primary : theme.colors.onSurfaceVariant}
           />
         </View>
 
+        {/* Secondary Controls */}
+        <View style={styles.secondaryControls}>
+          <TouchableOpacity
+            style={styles.queueButton}
+            onPress={() => setQueueVisible(true)}
+          >
+            <IconButton
+              icon="playlist-music"
+              size={24}
+              iconColor={theme.colors.onSurfaceVariant}
+            />
+            <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+              Queue
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Queue Info */}
         <View style={styles.queueInfo}>
-          <Text variant="bodyMedium">
-            Track {currentIndex + 1} of {playlistTracks.length}
+          <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+            {currentIndex + 1} of {queue.length} tracks
           </Text>
+          {shuffleEnabled && (
+            <Text variant="bodySmall" style={{ color: theme.colors.primary, marginLeft: 8 }}>
+              • Shuffle On
+            </Text>
+          )}
+          {repeatMode !== 'off' && (
+            <Text variant="bodySmall" style={{ color: theme.colors.primary, marginLeft: 8 }}>
+              • Repeat {repeatMode === 'one' ? 'One' : 'All'}
+            </Text>
+          )}
         </View>
       </View>
+
+      <QueueModal visible={queueVisible} onDismiss={() => setQueueVisible(false)} />
     </SafeAreaView>
   );
 };
@@ -207,49 +289,94 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    padding: 24,
+    paddingHorizontal: 24,
+    paddingTop: 16,
+    paddingBottom: 32,
+    alignItems: 'center',
+  },
+  artworkContainer: {
+    marginBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  artwork: {
+    width: SCREEN_WIDTH - 80,
+    height: SCREEN_WIDTH - 80,
+    borderRadius: 12,
+  },
+  placeholderArtwork: {
     justifyContent: 'center',
     alignItems: 'center',
   },
-  artwork: {
-    width: 300,
-    height: 300,
-    borderRadius: 12,
-    marginBottom: 32,
-  },
   info: {
     alignItems: 'center',
-    marginBottom: 32,
+    marginBottom: 24,
+    paddingHorizontal: 16,
   },
   title: {
     textAlign: 'center',
     marginBottom: 8,
+    fontWeight: '700',
   },
   artist: {
     textAlign: 'center',
-    opacity: 0.7,
   },
-  progressContainer: {
+  seekbarContainer: {
     width: '100%',
-    marginBottom: 32,
+    marginBottom: 24,
   },
-  progressBar: {
-    height: 4,
-    borderRadius: 2,
+  seekbarTrack: {
+    height: 6,
+    borderRadius: 3,
+    position: 'relative',
+  },
+  seekbarProgress: {
+    height: '100%',
+    borderRadius: 3,
+    position: 'absolute',
+    left: 0,
+    top: 0,
+  },
+  seekbarThumb: {
+    position: 'absolute',
+    top: -5,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
   },
   timeContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginTop: 8,
   },
-  controls: {
+  mainControls: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 32,
+    marginBottom: 24,
+    width: '100%',
+  },
+  playButton: {
+    borderRadius: 40,
+    marginHorizontal: 16,
+  },
+  secondaryControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  queueButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   queueInfo: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
   },
 });
 

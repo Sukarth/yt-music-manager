@@ -1,25 +1,35 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, Alert } from 'react-native';
 import { TextInput, Button, Text, useTheme } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RouteProp } from '@react-navigation/native';
 import { usePlaylistManager } from '../../hooks/usePlaylistManager';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import { RootStackParamList } from '../../types';
 import { extractPlaylistId } from '../../utils/formatters';
 
 type AddPlaylistScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'AddPlaylist'>;
+type AddPlaylistScreenRouteProp = RouteProp<RootStackParamList, 'AddPlaylist'>;
 
 interface AddPlaylistScreenProps {
   navigation: AddPlaylistScreenNavigationProp;
+  route: AddPlaylistScreenRouteProp;
 }
 
-const AddPlaylistScreen: React.FC<AddPlaylistScreenProps> = ({ navigation }) => {
+const AddPlaylistScreen: React.FC<AddPlaylistScreenProps> = ({ navigation, route }) => {
   const { addPlaylist, loading, error } = usePlaylistManager();
   const theme = useTheme();
 
   const [playlistUrl, setPlaylistUrl] = useState('');
   const [validationError, setValidationError] = useState<string | null>(null);
+
+  // Pre-fill playlist ID if passed from navigation
+  useEffect(() => {
+    if (route.params?.playlistId) {
+      setPlaylistUrl(route.params.playlistId);
+    }
+  }, [route.params?.playlistId]);
 
   const validateInput = (input: string): boolean => {
     if (!input.trim()) {

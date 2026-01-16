@@ -11,10 +11,10 @@ import {
   loadAuth,
   saveAuth,
 } from '../utils/storage';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 
 const getDocumentDirectory = (): string => {
-  return (FileSystem as any).documentDirectory || 'file:///';
+  return FileSystem.documentDirectory || 'file:///';
 };
 
 type AppAction =
@@ -105,7 +105,7 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
   }
 };
 
-export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(appReducer, initialState);
 
   useEffect(() => {
@@ -127,7 +127,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
       if (settings) {
         const downloadPath = settings.downloadPath || `${getDocumentDirectory()}YTMusicManager/`;
-        dispatch({ type: 'SET_SETTINGS', payload: { ...settings, downloadPath } });
+        const storageLocationType = (settings as any).storageLocationType || 'internal';
+        dispatch({
+          type: 'SET_SETTINGS',
+          payload: { ...settings, downloadPath, storageLocationType },
+        });
       } else {
         const downloadPath = `${getDocumentDirectory()}YTMusicManager/`;
         dispatch({ type: 'SET_SETTINGS', payload: { ...DEFAULT_SETTINGS, downloadPath } });

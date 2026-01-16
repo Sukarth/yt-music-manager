@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as SecureStore from 'expo-secure-store';
+import { setItemAsync, getItemAsync, deleteItemAsync } from 'expo-secure-store';
 import { STORAGE_KEYS } from '../constants';
 import { Playlist, Track, AppSettings, AuthState } from '../types';
 
@@ -62,11 +62,11 @@ export const saveSettings = async (settings: AppSettings): Promise<void> => {
 
 export const loadAuth = async (): Promise<AuthState | null> => {
   try {
-    const accessToken = await SecureStore.getItemAsync('access_token');
-    const refreshToken = await SecureStore.getItemAsync('refresh_token');
-    const tokenExpiry = await SecureStore.getItemAsync('token_expiry');
-    const userEmail = await SecureStore.getItemAsync('user_email');
-    const authMode = await SecureStore.getItemAsync('auth_mode');
+    const accessToken = await getItemAsync('access_token');
+    const refreshToken = await getItemAsync('refresh_token');
+    const tokenExpiry = await getItemAsync('token_expiry');
+    const userEmail = await getItemAsync('user_email');
+    const authMode = await getItemAsync('auth_mode');
 
     if (!accessToken) return null;
 
@@ -87,18 +87,18 @@ export const loadAuth = async (): Promise<AuthState | null> => {
 export const saveAuth = async (auth: AuthState): Promise<void> => {
   try {
     if (auth.accessToken) {
-      await SecureStore.setItemAsync('access_token', auth.accessToken);
+      await setItemAsync('access_token', auth.accessToken);
     }
     if (auth.refreshToken) {
-      await SecureStore.setItemAsync('refresh_token', auth.refreshToken);
+      await setItemAsync('refresh_token', auth.refreshToken);
     }
     if (auth.tokenExpiry) {
-      await SecureStore.setItemAsync('token_expiry', auth.tokenExpiry);
+      await setItemAsync('token_expiry', auth.tokenExpiry);
     }
     if (auth.userEmail) {
-      await SecureStore.setItemAsync('user_email', auth.userEmail);
+      await setItemAsync('user_email', auth.userEmail);
     }
-    await SecureStore.setItemAsync('auth_mode', auth.authMode);
+    await setItemAsync('auth_mode', auth.authMode);
   } catch (error) {
     console.error('Error saving auth:', error);
     throw error;
@@ -107,11 +107,11 @@ export const saveAuth = async (auth: AuthState): Promise<void> => {
 
 export const clearAuth = async (): Promise<void> => {
   try {
-    await SecureStore.deleteItemAsync('access_token');
-    await SecureStore.deleteItemAsync('refresh_token');
-    await SecureStore.deleteItemAsync('token_expiry');
-    await SecureStore.deleteItemAsync('user_email');
-    await SecureStore.deleteItemAsync('auth_mode');
+    await deleteItemAsync('access_token');
+    await deleteItemAsync('refresh_token');
+    await deleteItemAsync('token_expiry');
+    await deleteItemAsync('user_email');
+    await deleteItemAsync('auth_mode');
   } catch (error) {
     console.error('Error clearing auth:', error);
     throw error;

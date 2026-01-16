@@ -12,9 +12,6 @@ export default function App() {
   const theme = colorScheme === 'dark' ? MD3DarkTheme : MD3LightTheme;
 
   useEffect(() => {
-    // Complete any pending auth sessions
-    WebBrowser.maybeCompleteAuthSession();
-
     const setupAudio = async () => {
       try {
         await Audio.setAudioModeAsync({

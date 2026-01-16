@@ -1,159 +1,77 @@
-import { AuthRequest, makeRedirectUri } from 'expo-auth-session';
-import { Platform } from 'react-native';
+import {
+  GoogleSignin,
+  statusCodes,
+  User,
+} from '@react-native-google-signin/google-signin';
 import { AuthState } from '../types';
 import { saveAuth, clearAuth } from '../utils/storage';
 
-// Web/Default Client ID
-// TODO: Replace this with web client ID from Google Cloud Console
-const GOOGLE_CLIENT_ID = 'WEB_CLIENT_ID_HERE.apps.googleusercontent.com';
+// Web Client ID is required for offline access (refresh tokens) and ID tokens.
+// Even when using Android Native Auth, you should pass the WEB client ID here.
+// Create a "Web application" credential in Google Cloud Console to get this.
+const GOOGLE_WEB_CLIENT_ID = '16949272129-lbmkn1vads3bkh10185ah9gjr7rffm3c.apps.googleusercontent.com';
 
-// Android Client ID (for OAuth type "Android" in Google Cloud Console)
-const GOOGLE_ANDROID_CLIENT_ID =
-  '16949272129-dhv9fckqks0fr7f0b8sd23tviortdsav.apps.googleusercontent.com';
-
-// iOS Client ID
-// TODO: Replace this with iOS OAuth client ID from Google Cloud Console
-const GOOGLE_IOS_CLIENT_ID = 'IOS_CLIENT_ID_HERE.apps.googleusercontent.com';
-
-// Android package name - must match the package name in app.json
-const ANDROID_PACKAGE_NAME = 'com.ytmusicmanager.app';
-
-/**
- * Get the platform-specific Google Client ID
- */
-const getGoogleClientId = (): string => {
-  return (
-    Platform.select({
-      android: GOOGLE_ANDROID_CLIENT_ID,
-      ios: GOOGLE_IOS_CLIENT_ID,
-      default: GOOGLE_CLIENT_ID,
-    }) || GOOGLE_CLIENT_ID
-  );
-};
-
-const discovery = {
-  authorizationEndpoint: 'https://accounts.google.com/o/oauth2/v2/auth',
-  tokenEndpoint: 'https://oauth2.googleapis.com/token',
-  revocationEndpoint: 'https://oauth2.googleapis.com/revoke',
-};
+// Configure Google Sign-In once
+GoogleSignin.configure({
+  scopes: ['https://www.googleapis.com/auth/youtube.readonly'],
+  webClientId: GOOGLE_WEB_CLIENT_ID, // Enable this if you put your WEB client ID above
+  offlineAccess: true, // required to get a refresh token
+  forceCodeForRefreshToken: true,
+});
 
 export class AuthService {
   async signInWithGoogle(): Promise<AuthState> {
     try {
-      // For Android native/production builds, we need to use the `native` option
-      // with a package name-based redirect URI.
-      // Custom schemes like 'ytmusicmanager://' are not supported by Google OAuth for Android.
-      // The `native` option accepts a string URI in the format:
-      // `<package-name>:/oauth2redirect` which is accepted by Google OAuth.
-      const redirectUri = makeRedirectUri({
-        scheme: 'ytmusicmanager',
-        native: Platform.OS === 'android' ? `${ANDROID_PACKAGE_NAME}:/oauth2redirect` : undefined,
-      });
-
-      const clientId = getGoogleClientId();
-
-      const request = new AuthRequest({
-        clientId,
-        scopes: ['https://www.googleapis.com/auth/youtube.readonly'],
-        redirectUri,
-      });
-
-      await request.makeAuthUrlAsync(discovery);
-
-      const result = await request.promptAsync(discovery);
+      await GoogleSignin.hasPlayServices();
+      const result = await GoogleSignin.signIn();
 
       if (result.type !== 'success') {
-        throw new Error('Authentication failed');
+        throw new Error('User cancelled the login flow');
       }
 
-      const { code } = result.params;
-      const codeVerifier = request.codeVerifier;
+      const userInfo = result.data;
 
-      const tokenResponse = await this.exchangeCodeForToken(code, redirectUri, codeVerifier);
+      // Get tokens (access token and refresh token)
+      const tokens = await GoogleSignin.getTokens();
 
       const authState: AuthState = {
         isAuthenticated: true,
-        accessToken: tokenResponse.access_token,
-        refreshToken: tokenResponse.refresh_token || null,
-        tokenExpiry: new Date(Date.now() + tokenResponse.expires_in * 1000).toISOString(),
-        userEmail: null,
+        accessToken: tokens.accessToken,
+        refreshToken: null,
+        tokenExpiry: new Date(Date.now() + 3600 * 1000).toISOString(),
+        userEmail: userInfo.user.email,
         authMode: 'oauth',
       };
 
       await saveAuth(authState);
 
       return authState;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error signing in with Google:', error);
-      throw new Error('Failed to sign in with Google');
+
+      if (error.code === statusCodes.SIGN_IN_CANCELLED) {
+        throw new Error('User cancelled the login flow');
+      } else if (error.code === statusCodes.IN_PROGRESS) {
+        throw new Error('Sign in is already in progress');
+      } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+        throw new Error('Play Services are not available or outdated');
+      } else {
+        throw new Error('Failed to sign in with Google: ' + error.message);
+      }
     }
-  }
-
-  private async exchangeCodeForToken(
-    code: string,
-    redirectUri: string,
-    codeVerifier?: string
-  ): Promise<{
-    access_token: string;
-    refresh_token?: string;
-    expires_in: number;
-  }> {
-    const clientId = getGoogleClientId();
-
-    const params: Record<string, string> = {
-      code,
-      client_id: clientId,
-      redirect_uri: redirectUri,
-      grant_type: 'authorization_code',
-    };
-
-    // Include code_verifier for PKCE flow if available
-    if (codeVerifier) {
-      params.code_verifier = codeVerifier;
-    }
-
-    const response = await fetch(discovery.tokenEndpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: new URLSearchParams(params).toString(),
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to exchange code for token');
-    }
-
-    return response.json();
   }
 
   async refreshAccessToken(refreshToken: string): Promise<AuthState> {
     try {
-      const clientId = getGoogleClientId();
-
-      const response = await fetch(discovery.tokenEndpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({
-          refresh_token: refreshToken,
-          client_id: clientId,
-          grant_type: 'refresh_token',
-        }).toString(),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to refresh token');
-      }
-
-      const data = await response.json();
+      // Try silent sign in to refresh tokens
+      await GoogleSignin.signInSilently();
+      const tokens = await GoogleSignin.getTokens();
 
       const authState: AuthState = {
         isAuthenticated: true,
-        accessToken: data.access_token,
+        accessToken: tokens.accessToken,
         refreshToken: refreshToken,
-        tokenExpiry: new Date(Date.now() + data.expires_in * 1000).toISOString(),
+        tokenExpiry: new Date(Date.now() + 3600 * 1000).toISOString(),
         userEmail: null,
         authMode: 'oauth',
       };
@@ -168,7 +86,16 @@ export class AuthService {
   }
 
   async signOut(): Promise<void> {
-    await clearAuth();
+    try {
+      const user = GoogleSignin.getCurrentUser();
+      if (user) {
+        await GoogleSignin.signOut();
+      }
+      await clearAuth();
+    } catch (error) {
+      console.error('Error signing out:', error);
+      await clearAuth();
+    }
   }
 
   useNoAuth(): AuthState {

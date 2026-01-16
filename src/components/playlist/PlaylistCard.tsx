@@ -1,18 +1,30 @@
 import React from 'react';
 import { View, StyleSheet, Image } from 'react-native';
 import { Card, Text, ProgressBar, IconButton, useTheme } from 'react-native-paper';
-import { Playlist } from '../../types';
+import { Playlist, Track } from '../../types';
 import { formatFileSize, formatDate } from '../../utils/formatters';
 
 interface PlaylistCardProps {
   playlist: Playlist;
+  downloadedCount?: number;
+  downloadedSize?: number;
   onPress: () => void;
   onSync?: () => void;
   onDelete?: () => void;
 }
 
-const PlaylistCard: React.FC<PlaylistCardProps> = ({ playlist, onPress, onSync, onDelete }) => {
+const PlaylistCard: React.FC<PlaylistCardProps> = ({
+  playlist,
+  downloadedCount = 0,
+  downloadedSize,
+  onPress,
+  onSync,
+  onDelete
+}) => {
   const theme = useTheme();
+
+  // Use calculated size if available, otherwise fall back to playlist.totalSize
+  const displaySize = downloadedSize !== undefined ? downloadedSize : playlist.totalSize;
 
   const getSyncStatusColor = () => {
     switch (playlist.syncStatus) {
@@ -20,7 +32,7 @@ const PlaylistCard: React.FC<PlaylistCardProps> = ({ playlist, onPress, onSync, 
       case 'downloading':
         return theme.colors.primary;
       case 'completed':
-        return theme.colors.tertiary;
+        return '#4CAF50'; // Green color for success
       case 'error':
         return theme.colors.error;
       default:
@@ -54,7 +66,7 @@ const PlaylistCard: React.FC<PlaylistCardProps> = ({ playlist, onPress, onSync, 
             {playlist.name}
           </Text>
           <Text variant="bodySmall" style={styles.trackCount}>
-            {playlist.trackCount} tracks • {formatFileSize(playlist.totalSize)}
+            {downloadedCount}/{playlist.trackCount} tracks • {formatFileSize(displaySize)}
           </Text>
           <View style={styles.statusContainer}>
             <View style={[styles.statusDot, { backgroundColor: getSyncStatusColor() }]} />
@@ -69,26 +81,7 @@ const PlaylistCard: React.FC<PlaylistCardProps> = ({ playlist, onPress, onSync, 
           )}
         </View>
         <View style={styles.actions}>
-          {onSync && (
-            <IconButton
-              icon="sync"
-              size={20}
-              onPress={e => {
-                e.stopPropagation();
-                onSync();
-              }}
-            />
-          )}
-          {onDelete && (
-            <IconButton
-              icon="delete"
-              size={20}
-              onPress={e => {
-                e.stopPropagation();
-                onDelete();
-              }}
-            />
-          )}
+          {/* Actions removed as requested, now in Detail screen */}
         </View>
       </View>
       {(playlist.syncStatus === 'syncing' || playlist.syncStatus === 'downloading') && (

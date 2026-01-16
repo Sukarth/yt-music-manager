@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, StyleSheet, Image } from 'react-native';
-import { List, Text, ProgressBar, IconButton, useTheme } from 'react-native-paper';
+import { Text, ProgressBar, IconButton, useTheme, TouchableRipple, Surface } from 'react-native-paper';
 import { Track } from '../../types';
 import { formatDuration, formatFileSize } from '../../utils/formatters';
 
@@ -14,115 +14,192 @@ interface TrackItemProps {
 const TrackItem: React.FC<TrackItemProps> = ({ track, onPress, onDownload, onCancel }) => {
   const theme = useTheme();
 
+  const isDownloading = track.downloadStatus === 'downloading';
+  const isCompleted = track.downloadStatus === 'completed';
+  const isError = track.downloadStatus === 'error';
+
+  const hasKnownTotalBytes = track.fileSize > 0;
+  const hasValidProgress = Number.isFinite(track.downloadProgress) && track.downloadProgress >= 0;
+
   const getStatusIcon = () => {
-    switch (track.downloadStatus) {
-      case 'completed':
-        return 'checkmark-circle';
-      case 'downloading':
-        return 'pause-circle';
-      case 'error':
-        return 'alert-circle';
-      default:
-        return 'download';
-    }
+    if (isCompleted) return 'check-circle';
+    if (isDownloading) return 'stop-circle-outline';
+    if (isError) return 'alert-circle-outline';
+    return 'download-outline';
   };
 
   const getStatusColor = () => {
-    switch (track.downloadStatus) {
-      case 'completed':
-        return theme.colors.tertiary;
-      case 'downloading':
-        return theme.colors.primary;
-      case 'error':
-        return theme.colors.error;
-      default:
-        return theme.colors.outline;
+    if (isCompleted) return '#4CAF50';
+    if (isDownloading) return theme.colors.primary;
+    if (isError) return theme.colors.error;
+    return theme.colors.onSurfaceVariant;
+  };
+
+  const handleActionPress = () => {
+    if (isDownloading) {
+      onCancel?.();
+    } else if (isCompleted) {
+      // No action for now
+    } else {
+      onDownload?.();
     }
   };
 
   return (
-    <View style={styles.container}>
-      <List.Item
-        title={track.title}
-        description={`${track.artist} • ${formatDuration(track.duration)}`}
-        onPress={onPress}
-        left={props =>
-          track.thumbnailUrl ? (
-            <Image source={{ uri: track.thumbnailUrl }} style={styles.thumbnail} />
-          ) : (
-            <List.Icon {...props} icon="music-note" />
-          )
-        }
-        right={() => (
-          <View style={styles.rightContent}>
-            {track.downloadStatus === 'completed' && track.fileSize > 0 && (
-              <Text variant="bodySmall" style={styles.fileSize}>
-                {formatFileSize(track.fileSize)}
-              </Text>
-            )}
-            {track.downloadStatus === 'downloading' ? (
-              <IconButton icon={getStatusIcon()} iconColor={getStatusColor()} onPress={onCancel} />
-            ) : track.downloadStatus === 'pending' ? (
-              <IconButton
-                icon={getStatusIcon()}
-                iconColor={getStatusColor()}
-                onPress={onDownload}
-              />
+    <Surface style={styles.surface} elevation={0}>
+      <TouchableRipple onPress={onPress} style={styles.touchable}>
+        <View style={styles.container}>
+          {/* Thumbnail Section */}
+          <View style={styles.imageContainer}>
+            {track.thumbnailUrl ? (
+              <Image source={{ uri: track.thumbnailUrl }} style={styles.thumbnail} />
             ) : (
-              <IconButton icon={getStatusIcon()} iconColor={getStatusColor()} />
+              <View style={[styles.thumbnail, styles.placeholder, { backgroundColor: theme.colors.surfaceVariant }]}>
+                <Text variant="headlineSmall">🎵</Text>
+              </View>
             )}
           </View>
-        )}
-      />
-      {track.downloadStatus === 'downloading' && (
-        <View style={styles.progressContainer}>
-          <ProgressBar
-            progress={track.downloadProgress}
-            color={theme.colors.primary}
-            style={styles.progressBar}
-          />
-          <Text variant="bodySmall" style={styles.progressText}>
-            {Math.round(track.downloadProgress * 100)}%
-          </Text>
+
+          {/* Info Section */}
+          <View style={styles.infoContainer}>
+            <Text variant="titleMedium" numberOfLines={1} style={styles.title}>
+              {track.title}
+            </Text>
+
+            <View style={styles.detailsRow}>
+              <Text variant="bodyMedium" numberOfLines={1} style={[styles.artist, { color: theme.colors.onSurfaceVariant }]}>
+                {track.artist}
+              </Text>
+              <Text variant="bodySmall" style={[styles.duration, { color: theme.colors.onSurfaceDisabled }]}>
+                • {formatDuration(track.duration || 0)}
+              </Text>
+            </View>
+
+            {/* Progress Bar / Size Info */}
+            <View style={styles.statusContainer}>
+              {isDownloading ? (
+                <View style={styles.progressWrapper}>
+                  {hasKnownTotalBytes && hasValidProgress ? (
+                    <>
+                      <ProgressBar
+                        progress={track.downloadProgress}
+                        color={theme.colors.primary}
+                        style={styles.progressBar}
+                      />
+                      <Text
+                        variant="labelSmall"
+                        style={{ color: theme.colors.primary, marginLeft: 8 }}>
+                        {Math.round(track.downloadProgress * 100)}%
+                      </Text>
+                    </>
+                  ) : (
+                    <>
+                      <ProgressBar indeterminate color={theme.colors.primary} style={styles.progressBar} />
+                      <Text
+                        variant="labelSmall"
+                        style={{ color: theme.colors.primary, marginLeft: 8 }}>
+                        Downloading...
+                      </Text>
+                    </>
+                  )}
+                </View>
+              ) : isCompleted ? (
+                track.fileSize > 0 && (
+                  <Text variant="labelSmall" style={{ color: '#4CAF50' }}>
+                    Downloaded ({formatFileSize(track.fileSize)})
+                  </Text>
+                )
+              ) : isError ? (
+                <Text variant="labelSmall" style={{ color: theme.colors.error }}>
+                  Download Failed
+                </Text>
+              ) : (
+                <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceDisabled }}>
+                  Ready to download
+                </Text>
+              )}
+            </View>
+          </View>
+
+          {/* Action Button Section */}
+          <View style={styles.actionContainer}>
+            <IconButton
+              icon={getStatusIcon()}
+              iconColor={getStatusColor()}
+              size={24}
+              onPress={handleActionPress}
+              disabled={isCompleted}
+            />
+          </View>
         </View>
-      )}
-    </View>
+      </TouchableRipple>
+    </Surface>
   );
 };
 
 const styles = StyleSheet.create({
+  surface: {
+    marginHorizontal: 16,
+    marginVertical: 4,
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: 'transparent',
+  },
+  touchable: {
+    padding: 8,
+  },
   container: {
-    marginVertical: 2,
-  },
-  thumbnail: {
-    width: 50,
-    height: 50,
-    borderRadius: 4,
-    marginLeft: 8,
-    alignSelf: 'center',
-  },
-  rightContent: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  fileSize: {
-    marginRight: 8,
-    opacity: 0.7,
+  imageContainer: {
+    marginRight: 12,
   },
-  progressContainer: {
-    paddingHorizontal: 16,
-    paddingBottom: 8,
+  thumbnail: {
+    width: 56,
+    height: 56,
+    borderRadius: 8,
+  },
+  placeholder: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  infoContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    marginRight: 8,
+  },
+  title: {
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  detailsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  artist: {
+    maxWidth: '70%',
+  },
+  duration: {
+    marginLeft: 4,
+  },
+  statusContainer: {
+    height: 16,
+    justifyContent: 'center',
+  },
+  progressWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   progressBar: {
     flex: 1,
     height: 4,
-    marginRight: 8,
+    borderRadius: 2,
   },
-  progressText: {
-    width: 40,
-    textAlign: 'right',
+  actionContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
 
