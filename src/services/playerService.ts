@@ -76,7 +76,7 @@ class PlayerService {
 
     private setupLockScreenControls(track: Track) {
         if (!this.sound) return;
-        
+
         try {
             this.sound.setActiveForLockScreen(true, {
                 title: track.title,
@@ -90,7 +90,7 @@ class PlayerService {
 
     private updateLockScreenMetadata() {
         if (!this.sound || !this.state.currentTrack) return;
-        
+
         try {
             this.sound.updateLockScreenMetadata({
                 title: this.state.currentTrack.title,
