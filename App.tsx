@@ -17,7 +17,7 @@ export default function App() {
         await setAudioModeAsync({
           playsInSilentMode: true,
           shouldPlayInBackground: true,
-          interruptionMode: 'duckOthers',
+          interruptionMode: 'doNotMix', // Required for lock screen controls
         });
       } catch (error) {
         console.error('Error setting up audio:', error);

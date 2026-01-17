@@ -6,9 +6,13 @@ jest.mock('expo-audio', () => ({
     seekTo: jest.fn(),
     remove: jest.fn(),
     addListener: jest.fn(),
+    setActiveForLockScreen: jest.fn(),
+    updateLockScreenMetadata: jest.fn(),
+    clearLockScreenControls: jest.fn(),
     playing: false,
     currentTime: 0,
     duration: 0,
+    isLoaded: true,
   })),
 }));
 

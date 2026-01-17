@@ -1,4 +1,4 @@
-import { createAudioPlayer, setAudioModeAsync, AudioPlayer } from 'expo-audio';
+import { createAudioPlayer, setAudioModeAsync, AudioPlayer, AudioStatus } from 'expo-audio';
 import { Alert } from 'react-native';
 import { Track } from '../types';
 
@@ -46,7 +46,7 @@ class PlayerService {
             await setAudioModeAsync({
                 shouldPlayInBackground: true,
                 playsInSilentMode: true,
-                interruptionMode: 'duckOthers',
+                interruptionMode: 'doNotMix', // Required for lock screen controls
                 shouldRouteThroughEarpiece: false,
             });
             this.isInitialized = true;
@@ -72,6 +72,34 @@ class PlayerService {
 
     getState(): PlayerState {
         return { ...this.state };
+    }
+
+    private setupLockScreenControls(track: Track) {
+        if (!this.sound) return;
+        
+        try {
+            this.sound.setActiveForLockScreen(true, {
+                title: track.title,
+                artist: track.artist || 'Unknown Artist',
+                artworkUrl: track.thumbnailUrl || undefined,
+            });
+        } catch (error) {
+            console.error('Failed to setup lock screen controls:', error);
+        }
+    }
+
+    private updateLockScreenMetadata() {
+        if (!this.sound || !this.state.currentTrack) return;
+        
+        try {
+            this.sound.updateLockScreenMetadata({
+                title: this.state.currentTrack.title,
+                artist: this.state.currentTrack.artist || 'Unknown Artist',
+                artworkUrl: this.state.currentTrack.thumbnailUrl || undefined,
+            });
+        } catch (error) {
+            console.error('Failed to update lock screen metadata:', error);
+        }
     }
 
     async loadTrack(track: Track, queue?: Track[], startIndex?: number) {
@@ -102,6 +130,9 @@ class PlayerService {
                 originalQueue: newQueue,
                 currentIndex: index,
             });
+
+            // Setup lock screen controls after a short delay to ensure player is ready
+            setTimeout(() => this.setupLockScreenControls(track), 100);
         } catch (error) {
             console.error('Error loading track:', error);
             this.updateState({ isLoading: false });
@@ -125,13 +156,16 @@ class PlayerService {
         return [currentTrack, ...otherTracks];
     }
 
-    private onPlaybackStatusUpdate = (status: any) => {
+    private onPlaybackStatusUpdate = (status: AudioStatus) => {
         if (!status.isLoaded) return;
+
+        const wasPlaying = this.state.isPlaying;
+        const isNowPlaying = status.playing;
 
         this.updateState({
             position: status.currentTime || 0,
             duration: status.duration || 0,
-            isPlaying: status.playing || false,
+            isPlaying: isNowPlaying,
         });
 
         if (status.didJustFinish) {
@@ -160,11 +194,13 @@ class PlayerService {
     async play() {
         if (!this.sound) return;
         this.sound.play();
+        this.updateState({ isPlaying: true });
     }
 
     async pause() {
         if (!this.sound) return;
         this.sound.pause();
+        this.updateState({ isPlaying: false });
     }
 
     async togglePlayPause() {
@@ -177,7 +213,12 @@ class PlayerService {
 
     async seekTo(seconds: number) {
         if (!this.sound) return;
-        await this.sound.seekTo(seconds);
+        try {
+            await this.sound.seekTo(seconds);
+            this.updateState({ position: seconds });
+        } catch (error) {
+            console.error('Error seeking:', error);
+        }
     }
 
     async playNext() {
@@ -228,7 +269,11 @@ class PlayerService {
                 isLoading: false,
                 isPlaying: true,
                 position: 0,
+                duration: 0,
             });
+
+            // Setup lock screen controls after a short delay to ensure player is ready
+            setTimeout(() => this.setupLockScreenControls(track), 100);
         } catch (error) {
             console.error('Error loading track:', error);
             this.updateState({ isLoading: false });
@@ -273,6 +318,11 @@ class PlayerService {
     async stop() {
         if (this.sound) {
             this.sound.pause();
+            try {
+                this.sound.clearLockScreenControls();
+            } catch (error) {
+                console.error('Failed to clear lock screen controls:', error);
+            }
             this.sound.remove();
             this.sound = null;
         }
