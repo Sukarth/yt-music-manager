@@ -1,4 +1,4 @@
-import { Audio, AVPlaybackStatus } from 'expo-av';
+import { createAudioPlayer, setAudioModeAsync, AudioPlayer } from 'expo-audio';
 import { Alert } from 'react-native';
 import { Track } from '../types';
 
@@ -20,7 +20,7 @@ export interface PlayerState {
 type PlayerCallback = (state: PlayerState) => void;
 
 class PlayerService {
-    private sound: Audio.Sound | null = null;
+    private sound: AudioPlayer | null = null;
     private state: PlayerState = {
         currentTrack: null,
         isPlaying: false,
@@ -43,11 +43,11 @@ class PlayerService {
     private async initAudio() {
         if (this.isInitialized) return;
         try {
-            await Audio.setAudioModeAsync({
-                staysActiveInBackground: true,
-                playsInSilentModeIOS: true,
-                shouldDuckAndroid: true,
-                playThroughEarpieceAndroid: false,
+            await setAudioModeAsync({
+                shouldPlayInBackground: true,
+                playsInSilentMode: true,
+                interruptionMode: 'duckOthers',
+                shouldRouteThroughEarpiece: false,
             });
             this.isInitialized = true;
         } catch (error) {
@@ -81,17 +81,13 @@ class PlayerService {
 
         try {
             if (this.sound) {
-                await this.sound.unloadAsync();
+                this.sound.remove();
                 this.sound = null;
             }
 
-            const { sound } = await Audio.Sound.createAsync(
-                { uri: track.filePath },
-                { shouldPlay: true },
-                this.onPlaybackStatusUpdate
-            );
-
-            this.sound = sound;
+            this.sound = createAudioPlayer({ uri: track.filePath });
+            this.sound.addListener('playbackStatusUpdate', this.onPlaybackStatusUpdate);
+            this.sound.play();
 
             const newQueue = queue || [track];
             const index = startIndex !== undefined ? startIndex : 0;
@@ -129,13 +125,13 @@ class PlayerService {
         return [currentTrack, ...otherTracks];
     }
 
-    private onPlaybackStatusUpdate = (status: AVPlaybackStatus) => {
+    private onPlaybackStatusUpdate = (status: any) => {
         if (!status.isLoaded) return;
 
         this.updateState({
-            position: status.positionMillis / 1000,
-            duration: (status.durationMillis || 0) / 1000,
-            isPlaying: status.isPlaying,
+            position: status.currentTime || 0,
+            duration: status.duration || 0,
+            isPlaying: status.playing || false,
         });
 
         if (status.didJustFinish) {
@@ -163,12 +159,12 @@ class PlayerService {
 
     async play() {
         if (!this.sound) return;
-        await this.sound.playAsync();
+        this.sound.play();
     }
 
     async pause() {
         if (!this.sound) return;
-        await this.sound.pauseAsync();
+        this.sound.pause();
     }
 
     async togglePlayPause() {
@@ -181,7 +177,7 @@ class PlayerService {
 
     async seekTo(seconds: number) {
         if (!this.sound) return;
-        await this.sound.setPositionAsync(seconds * 1000);
+        await this.sound.seekTo(seconds);
     }
 
     async playNext() {
@@ -219,17 +215,13 @@ class PlayerService {
 
         try {
             if (this.sound) {
-                await this.sound.unloadAsync();
+                this.sound.remove();
                 this.sound = null;
             }
 
-            const { sound } = await Audio.Sound.createAsync(
-                { uri: track.filePath },
-                { shouldPlay: true },
-                this.onPlaybackStatusUpdate
-            );
-
-            this.sound = sound;
+            this.sound = createAudioPlayer({ uri: track.filePath });
+            this.sound.addListener('playbackStatusUpdate', this.onPlaybackStatusUpdate);
+            this.sound.play();
 
             this.updateState({
                 currentTrack: track,
@@ -280,8 +272,8 @@ class PlayerService {
 
     async stop() {
         if (this.sound) {
-            await this.sound.stopAsync();
-            await this.sound.unloadAsync();
+            this.sound.pause();
+            this.sound.remove();
             this.sound = null;
         }
         this.updateState({

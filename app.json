@@ -5,7 +5,6 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "automatic",
     "scheme": "ytmusicmanager",
     "newArchEnabled": true,
     "splash": {
@@ -53,7 +52,7 @@
     },
     "plugins": [
       "@react-native-google-signin/google-signin",
-      "expo-av",
+      "expo-audio",
       "expo-file-system",
       "expo-document-picker",
       "expo-secure-store",

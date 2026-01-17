@@ -3,12 +3,21 @@ import { useAppContext } from '../store/AppContext';
 import { Track } from '../types';
 import { downloadService } from '../services/downloadService';
 import { youtubeApi } from '../services/youtubeApi';
+import { useStoragePermission } from './useStoragePermission';
 
 export const useDownloadManager = () => {
   const { state, dispatch } = useAppContext();
+  const { checkAndSetupStorage } = useStoragePermission();
   const [activeDownloads, setActiveDownloads] = useState<Set<string>>(new Set());
 
-  const downloadTrack = async (track: Track): Promise<void> => {
+  const downloadTrack = async (track: Track, options: { skipStorageCheck?: boolean } = {}): Promise<void> => {
+    if (!options.skipStorageCheck) {
+      const ok = await checkAndSetupStorage();
+      if (!ok) {
+        throw new Error('Folder selection is required before downloading.');
+      }
+    }
+
     if (activeDownloads.has(track.id)) {
       return;
     }
@@ -26,11 +35,14 @@ export const useDownloadManager = () => {
     });
 
     try {
+      let lastKnownBytes = 0;
       const filePath = await downloadService.downloadTrack(
         track,
         playlist,
         state.settings.audioQuality,
         (progress, downloadedBytes, totalBytes) => {
+          const sizeForState = totalBytes > 0 ? totalBytes : Math.max(0, downloadedBytes);
+          lastKnownBytes = Math.max(lastKnownBytes, sizeForState);
           // Only dispatch if progress has changed significantly to reduce multiple renders
           // Or just dispatch every time, but throttling might be needed if it's too frequent
           dispatch({
@@ -41,7 +53,7 @@ export const useDownloadManager = () => {
               // Otherwise, spreading the original track (often 'pending') flips the UI back to "Ready to download".
               downloadStatus: 'downloading',
               downloadProgress: progress,
-              fileSize: totalBytes,
+              fileSize: sizeForState,
             },
           });
         }
@@ -50,15 +62,20 @@ export const useDownloadManager = () => {
       // Get actual file size after download
       const FileSystem = await import('expo-file-system/legacy');
       let actualFileSize = 0;
-      try {
-        const fileInfo = await FileSystem.getInfoAsync(filePath);
-        actualFileSize = fileInfo.exists && !fileInfo.isDirectory ? (fileInfo.size || 0) : 0;
-      } catch (err) {
-        console.error('Error getting file size:', err);
+      if (filePath.startsWith('content://')) {
+        // SAF URIs don't support getInfoAsync; use last known bytes from the download stream.
+        actualFileSize = lastKnownBytes;
+      } else {
+        try {
+          const fileInfo = await FileSystem.getInfoAsync(filePath);
+          actualFileSize = fileInfo.exists && !fileInfo.isDirectory ? (fileInfo.size || 0) : 0;
+        } catch (err) {
+          console.error('Error getting file size:', err);
+        }
       }
 
       // Integrity Check: If file is too small (e.g. < 5KB), it's likely an error page or corrupted.
-      if (actualFileSize < 5 * 1024) {
+      if (!filePath.startsWith('content://') && actualFileSize < 5 * 1024) {
         await FileSystem.deleteAsync(filePath, { idempotent: true });
         throw new Error('Downloaded file is too small (possible error page)');
       }
@@ -97,6 +114,12 @@ export const useDownloadManager = () => {
   };
 
   const downloadPlaylist = async (playlistId: string): Promise<{ success: number; failed: number }> => {
+    // Ensure storage is set up before starting the batch
+    const ok = await checkAndSetupStorage();
+    if (!ok) {
+      throw new Error('Folder selection is required before downloading.');
+    }
+
     const playlist = state.playlists.find(p => p.id === playlistId);
     if (!playlist) {
       throw new Error('Playlist not found');
@@ -123,7 +146,7 @@ export const useDownloadManager = () => {
       if (!track) return;
 
       try {
-        await downloadTrack(track);
+        await downloadTrack(track, { skipStorageCheck: true });
         successCount++;
       } catch (error) {
         console.error(`Failed to download track ${track.id}:`, error);
@@ -164,6 +187,12 @@ export const useDownloadManager = () => {
   };
 
   const syncPlaylist = async (playlistId: string): Promise<{ success: number; failed: number }> => {
+    // Ensure storage is set up before starting sync
+    const ok = await checkAndSetupStorage();
+    if (!ok) {
+      throw new Error('Folder selection is required before syncing.');
+    }
+
     const playlist = state.playlists.find(p => p.id === playlistId);
     if (!playlist) {
       throw new Error('Playlist not found');
@@ -196,6 +225,7 @@ export const useDownloadManager = () => {
           playlistId: playlistId,
           downloadStatus: 'pending',
           downloadProgress: 0,
+          filePath: '',
           fileSize: 0,
           position: index, // Append or re-index? Simple append for now
           createdAt: new Date().toISOString(),

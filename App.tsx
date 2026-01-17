@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { Provider as PaperProvider, MD3DarkTheme, MD3LightTheme } from 'react-native-paper';
 import { useColorScheme } from 'react-native';
-import { Audio } from 'expo-av';
+import { setAudioModeAsync } from 'expo-audio';
 import * as WebBrowser from 'expo-web-browser';
 import { AppProvider } from './src/store/AppContext';
 import RootNavigator from './src/navigation';
@@ -14,10 +14,10 @@ export default function App() {
   useEffect(() => {
     const setupAudio = async () => {
       try {
-        await Audio.setAudioModeAsync({
-          playsInSilentModeIOS: true,
-          staysActiveInBackground: true,
-          shouldDuckAndroid: true,
+        await setAudioModeAsync({
+          playsInSilentMode: true,
+          shouldPlayInBackground: true,
+          interruptionMode: 'duckOthers',
         });
       } catch (error) {
         console.error('Error setting up audio:', error);

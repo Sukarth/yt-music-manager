@@ -86,12 +86,16 @@ export const usePlaylistManager = () => {
       const tracks = state.tracks.filter(t => t.playlistId === playlistId);
 
       if (deleteFiles) {
+        // Delete individual track files
         for (const track of tracks) {
           if (track.filePath) {
             await downloadService.deleteTrackFile(track.filePath);
           }
         }
       }
+
+      // ALWAYS delete the entire playlist folder (even if user chose to keep files)
+      await downloadService.deletePlaylistFolder(playlist);
 
       dispatch({ type: 'REMOVE_PLAYLIST', payload: playlistId });
       dispatch({

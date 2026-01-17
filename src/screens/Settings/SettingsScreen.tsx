@@ -16,6 +16,8 @@ import { useAppContext } from '../../store/AppContext';
 import { authService } from '../../services/authService';
 import { AUDIO_QUALITY_OPTIONS, AUTO_SYNC_INTERVAL_OPTIONS } from '../../constants';
 import { formatFileSize } from '../../utils/formatters';
+import { loadDownloadIndex, clearDownloadIndex } from '../../utils/downloadIndex';
+import { downloadService } from '../../services/downloadService';
 
 const getDocumentDirectory = (): string => {
   return FileSystem.documentDirectory || 'file:///';
@@ -37,7 +39,7 @@ const SettingsScreen: React.FC = () => {
 
   React.useEffect(() => {
     calculateStorageUsage();
-  }, [state.tracks]); // Recalculate when tracks change
+  }, [state.tracks, state.settings.storageLocationType, state.settings.downloadPath]); // Recalculate when tracks/folder changes
 
   const pickDownloadFolder = async () => {
     if (Platform.OS !== 'android') {
@@ -69,10 +71,22 @@ const SettingsScreen: React.FC = () => {
 
   const calculateStorageUsage = async () => {
     try {
-      // Calculate from state.tracks which has up-to-date fileSize info
-      const totalSize = state.tracks
-        .filter(t => t.downloadStatus === 'completed' && t.fileSize > 0)
-        .reduce((sum, track) => sum + track.fileSize, 0);
+      // SAF doesn't support file size enumeration with expo-file-system, so we keep a persistent index
+      // that is updated on each successful download/delete.
+      const index = await loadDownloadIndex();
+
+      // Best-effort fallback: if some downloads aren't indexed yet, include sizes from current state.
+      // (Avoid double-counting by only adding tracks whose filePath isn't already in the index.)
+      let totalSize = 0;
+      for (const [uri, entry] of Object.entries(index)) {
+        totalSize += entry?.size || 0;
+      }
+
+      for (const track of state.tracks) {
+        if (track.downloadStatus === 'completed' && track.filePath && !index[track.filePath]) {
+          totalSize += track.fileSize || 0;
+        }
+      }
 
       setStorageUsed(totalSize);
     } catch (error) {
@@ -108,22 +122,63 @@ const SettingsScreen: React.FC = () => {
   };
 
   const handleDeleteDownloadedFiles = async () => {
-    Alert.alert('Delete Downloaded Files', 'This will delete all downloaded music files. Are you sure?', [
+    Alert.alert('Delete All Storage', 'This will delete the entire YT Music Manager folder and all downloaded music. Are you sure?', [
       { text: 'Cancel', style: 'cancel' },
       {
-        text: 'Delete',
+        text: 'Delete Everything',
         style: 'destructive',
         onPress: async () => {
           try {
-            const basePath = `${getDocumentDirectory()}YTMusicManager/`;
-            const dirInfo = await FileSystem.getInfoAsync(basePath);
-            if (dirInfo.exists) {
-              await FileSystem.deleteAsync(basePath, { idempotent: true });
+            const settingsStr = await import('@react-native-async-storage/async-storage').then(m => m.default.getItem('@yt_music_manager_settings'));
+            const settings = settingsStr ? JSON.parse(settingsStr) : null;
+            const isCustom = settings?.storageLocationType === 'custom' && settings?.downloadPath;
+
+            if (isCustom && Platform.OS === 'android') {
+              // Delete entire YT Music Manager folder from SAF location
+              const rootUri = settings.downloadPath;
+              try {
+                const children = await FileSystem.StorageAccessFramework.readDirectoryAsync(rootUri);
+                for (const childUri of children) {
+                  const childName = decodeURIComponent(childUri.split('/').pop() || '');
+                  if (childName === 'YT Music Manager') {
+                    await FileSystem.StorageAccessFramework.deleteAsync(childUri, { idempotent: true });
+                    break;
+                  }
+                }
+              } catch (safErr) {
+                console.error('SAF delete error:', safErr);
+              }
+            } else {
+              // Delete entire internal YTMusicManager folder
+              const basePath = `${getDocumentDirectory()}YTMusicManager/`;
+              try {
+                const dirInfo = await FileSystem.getInfoAsync(basePath);
+                if (dirInfo.exists) {
+                  await FileSystem.deleteAsync(basePath, { idempotent: true });
+                }
+              } catch (internalErr) {
+                console.error('Internal delete error:', internalErr);
+              }
             }
+
+            // Clear download index
+            await clearDownloadIndex();
+
+            // Clear all track file paths from state
+            state.tracks.forEach(track => {
+              if (track.filePath) {
+                dispatch({
+                  type: 'UPDATE_TRACK',
+                  payload: { ...track, filePath: '', downloadStatus: 'pending', downloadProgress: 0, fileSize: 0 }
+                });
+              }
+            });
+
             setStorageUsed(0);
-            Alert.alert('Success', 'Downloaded files deleted successfully!');
-          } catch {
-            Alert.alert('Error', 'Failed to delete downloaded files.');
+            Alert.alert('Success', 'All storage deleted successfully!');
+          } catch (e) {
+            console.error('Delete error:', e);
+            Alert.alert('Error', 'Failed to delete storage.');
           }
         },
       },
@@ -200,7 +255,7 @@ const SettingsScreen: React.FC = () => {
             description={
               state.settings.storageLocationType === 'custom'
                 ? 'Custom folder (tap to change)'
-                : 'App internal storage (private)'
+                : 'Unset'
             }
             left={(props: any) => <List.Icon {...props} icon="folder" />}
             right={(props: any) => <List.Icon {...props} icon="chevron-right" />}

@@ -158,7 +158,7 @@ yt-music-manager/
 
 ### Key Dependencies
 
-- `expo-av`: Audio playback
+- `expo-audio`: Audio playback
 - `expo-file-system`: File management
 - `expo-secure-store`: Encrypted token storage
 - `expo-auth-session`: OAuth flow

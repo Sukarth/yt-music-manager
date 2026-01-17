@@ -264,7 +264,7 @@ const PlaylistDetailScreen: React.FC<PlaylistDetailScreenProps> = ({ navigation,
           <View style={styles.downloadingContainer}>
             <ProgressBar indeterminate color={theme.colors.primary} style={styles.progressBar} />
             <Text variant="bodySmall" style={styles.downloadingText}>
-              {isSyncing ? 'Syncing playlist...' : 'Downloading playlist...'}
+              {isSyncing ? 'Syncing playlist...' : 'Downloading playlist. This will take some time.'}
             </Text>
           </View>
         )}

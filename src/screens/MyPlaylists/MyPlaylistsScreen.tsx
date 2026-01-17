@@ -138,6 +138,19 @@ const MyPlaylistsScreen: React.FC<MyPlaylistsScreenProps> = ({ navigation }) => 
     };
 
     useEffect(() => {
+        navigation.setOptions({
+            headerRight: () => (
+                <IconButton
+                    icon="folder-open"
+                    iconColor={theme.colors.primary}
+                    onPress={openDownloadsFolder}
+                    tooltip="Open Downloads Folder"
+                />
+            ),
+        });
+    }, [navigation, theme.colors.primary, state.settings.storageLocationType, state.settings.downloadPath]);
+
+    useEffect(() => {
         if (state.auth.authMode === 'oauth' && state.auth.accessToken) {
             fetchUserPlaylists();
         } else {

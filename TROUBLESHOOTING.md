@@ -520,10 +520,18 @@ adb shell dumpsys meminfo com.sukarth.ytmusicmanager
 
 ```javascript
 // jest.setup.js
-jest.mock('expo-av', () => ({
-  Audio: {
-    setAudioModeAsync: jest.fn(),
-  },
+jest.mock('expo-audio', () => ({
+  setAudioModeAsync: jest.fn(),
+  createAudioPlayer: jest.fn(() => ({
+    play: jest.fn(),
+    pause: jest.fn(),
+    seekTo: jest.fn(),
+    remove: jest.fn(),
+    addListener: jest.fn(),
+    playing: false,
+    currentTime: 0,
+    duration: 0,
+  })),
 }));
 ```
 
