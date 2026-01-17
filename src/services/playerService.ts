@@ -1,4 +1,11 @@
-import { createAudioPlayer, setAudioModeAsync, AudioPlayer, AudioStatus } from 'expo-audio';
+import TrackPlayer, {
+    AppKilledPlaybackBehavior,
+    Capability,
+    Event,
+    RepeatMode as TPRepeatMode,
+    State,
+    Track as TPTrack,
+} from 'react-native-track-player';
 import { Alert } from 'react-native';
 import { Track } from '../types';
 
@@ -20,7 +27,6 @@ export interface PlayerState {
 type PlayerCallback = (state: PlayerState) => void;
 
 class PlayerService {
-    private sound: AudioPlayer | null = null;
     private state: PlayerState = {
         currentTrack: null,
         isPlaying: false,
@@ -33,27 +39,62 @@ class PlayerService {
         originalQueue: [],
         currentIndex: -1,
     };
+
     private listeners: Set<PlayerCallback> = new Set();
     private isInitialized = false;
+    private listenersAttached = false;
 
     constructor() {
-        this.initAudio();
+        this.ensureInitialized();
     }
 
-    private async initAudio() {
+    private async ensureInitialized() {
         if (this.isInitialized) return;
         try {
-            await setAudioModeAsync({
-                shouldPlayInBackground: true,
-                playsInSilentMode: true,
-                interruptionMode: 'doNotMix',
-                interruptionModeAndroid: 'doNotMix',
-                shouldRouteThroughEarpiece: false,
+            await TrackPlayer.setupPlayer({ autoHandleInterruptions: true });
+            await TrackPlayer.updateOptions({
+                android: {
+                    appKilledPlaybackBehavior: AppKilledPlaybackBehavior.StopPlaybackAndRemoveNotification,
+                },
+                capabilities: [
+                    Capability.Play,
+                    Capability.Pause,
+                    Capability.SkipToNext,
+                    Capability.SkipToPrevious,
+                    Capability.SeekTo,
+                ],
+                compactCapabilities: [Capability.Play, Capability.Pause, Capability.SkipToNext],
+                progressUpdateEventInterval: 1,
             });
+            this.attachEventListeners();
             this.isInitialized = true;
         } catch (error) {
-            console.error('Failed to initialize audio mode:', error);
+            console.error('Failed to initialize player:', error);
         }
+    }
+
+    private attachEventListeners() {
+        if (this.listenersAttached) return;
+        this.listenersAttached = true;
+
+        TrackPlayer.addEventListener(Event.PlaybackState, (event) => {
+            const isPlaying = event.state === State.Playing;
+            const isLoading = event.state === State.Buffering || event.state === State.Loading;
+            this.updateState({ isPlaying, isLoading });
+        });
+
+        TrackPlayer.addEventListener(Event.PlaybackProgressUpdated, (event) => {
+            this.updateState({ position: event.position, duration: event.duration });
+        });
+
+        TrackPlayer.addEventListener(Event.PlaybackTrackChanged, async (event) => {
+            if (event.nextTrack === undefined || event.nextTrack === null) return;
+            const index = event.nextTrack;
+            const next = this.state.queue[index];
+            if (next) {
+                this.updateState({ currentIndex: index, currentTrack: next, position: 0 });
+            }
+        });
     }
 
     subscribe(callback: PlayerCallback): () => void {
@@ -63,7 +104,7 @@ class PlayerService {
     }
 
     private notifyListeners() {
-        this.listeners.forEach(callback => callback({ ...this.state }));
+        this.listeners.forEach((cb) => cb({ ...this.state }));
     }
 
     private updateState(updates: Partial<PlayerState>) {
@@ -75,75 +116,67 @@ class PlayerService {
         return { ...this.state };
     }
 
-    private setupLockScreenControls(track: Track) {
-        if (!this.sound) return;
-
-        try {
-            this.sound.setActiveForLockScreen(
-                true,
-                {
-                    title: track.title,
-                    artist: track.artist || 'Unknown Artist',
-                    artworkUrl: track.thumbnailUrl || undefined,
-                },
-                {
-                    showSeekForward: true,
-                    showSeekBackward: true,
-                }
-            );
-        } catch (error) {
-            console.error('Failed to setup lock screen controls:', error);
-        }
+    private toTPTrack(track: Track): TPTrack {
+        return {
+            id: track.id,
+            url: track.filePath || '',
+            title: track.title,
+            artist: track.artist,
+            artwork: track.thumbnailUrl,
+            duration: track.duration,
+        };
     }
 
-    private updateLockScreenMetadata() {
-        if (!this.sound || !this.state.currentTrack) return;
-
-        try {
-            this.sound.updateLockScreenMetadata({
-                title: this.state.currentTrack.title,
-                artist: this.state.currentTrack.artist || 'Unknown Artist',
-                artworkUrl: this.state.currentTrack.thumbnailUrl || undefined,
-            });
-        } catch (error) {
-            console.error('Failed to update lock screen metadata:', error);
+    private shuffleArray(array: Track[], currentIndex: number): Track[] {
+        const currentTrack = array[currentIndex];
+        const others = array.filter((_, i) => i !== currentIndex);
+        for (let i = others.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [others[i], others[j]] = [others[j], others[i]];
         }
+        return [currentTrack, ...others];
+    }
+
+    private tpRepeat(mode: RepeatMode): TPRepeatMode {
+        if (mode === 'one') return TPRepeatMode.Track;
+        if (mode === 'all') return TPRepeatMode.Queue;
+        return TPRepeatMode.Off;
     }
 
     async loadTrack(track: Track, queue?: Track[], startIndex?: number) {
         if (!track.filePath) return;
-
+        await this.ensureInitialized();
         this.updateState({ isLoading: true });
 
         try {
-            if (this.sound) {
-                this.sound.release();
-                this.sound = null;
-            }
+            const baseQueue = queue || [track];
+            const initialIndex = startIndex !== undefined ? startIndex : 0;
+            const effectiveQueue = this.state.shuffleEnabled
+                ? this.shuffleArray([...baseQueue], initialIndex)
+                : baseQueue;
+            const startId = track.id;
+            const effectiveIndex = effectiveQueue.findIndex((t) => t.id === startId);
+            const targetIndex = effectiveIndex >= 0 ? effectiveIndex : 0;
 
-            this.sound = createAudioPlayer({ uri: track.filePath });
-            this.sound.addListener('playbackStatusUpdate', this.onPlaybackStatusUpdate);
-            this.sound.play();
-
-            const newQueue = queue || [track];
-            const index = startIndex !== undefined ? startIndex : 0;
+            await TrackPlayer.reset();
+            await TrackPlayer.add(effectiveQueue.map((t) => this.toTPTrack(t)));
+            await TrackPlayer.setRepeatMode(this.tpRepeat(this.state.repeatMode));
+            await TrackPlayer.skip(targetIndex);
+            await TrackPlayer.play();
 
             this.updateState({
-                currentTrack: track,
+                currentTrack: effectiveQueue[targetIndex],
                 isLoading: false,
                 isPlaying: true,
                 position: 0,
-                duration: 0,
-                queue: this.state.shuffleEnabled ? this.shuffleArray([...newQueue], index) : newQueue,
-                originalQueue: newQueue,
-                currentIndex: index,
+                duration: effectiveQueue[targetIndex]?.duration || 0,
+                queue: effectiveQueue,
+                originalQueue: baseQueue,
+                currentIndex: targetIndex,
             });
-
-            // Setup lock screen controls after a short delay to ensure player is ready
-            setTimeout(() => this.setupLockScreenControls(track), 100);
         } catch (error) {
             console.error('Error loading track:', error);
-            this.updateState({ isLoading: false });
+            this.updateState({ isLoading: false, isPlaying: false });
             Alert.alert(
                 'Playback Error',
                 'The requested song file was not found (it may have been deleted). Please try resyncing your playlist.',
@@ -152,67 +185,19 @@ class PlayerService {
         }
     }
 
-    private shuffleArray(array: Track[], currentIndex: number): Track[] {
-        const currentTrack = array[currentIndex];
-        const otherTracks = array.filter((_, i) => i !== currentIndex);
-
-        for (let i = otherTracks.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [otherTracks[i], otherTracks[j]] = [otherTracks[j], otherTracks[i]];
-        }
-
-        return [currentTrack, ...otherTracks];
-    }
-
-    private onPlaybackStatusUpdate = (status: AudioStatus) => {
-        if (!status.isLoaded) return;
-
-        const wasPlaying = this.state.isPlaying;
-        const isNowPlaying = status.playing;
-
-        this.updateState({
-            position: status.currentTime || 0,
-            duration: status.duration || 0,
-            isPlaying: isNowPlaying,
-        });
-
-        if (status.didJustFinish) {
-            this.handleTrackFinished();
-        }
-    };
-
-    private async handleTrackFinished() {
-        const { repeatMode, currentIndex, queue } = this.state;
-
-        if (repeatMode === 'one') {
-            await this.seekTo(0);
-            await this.play();
-            return;
-        }
-
-        if (currentIndex < queue.length - 1) {
-            await this.playNext();
-        } else if (repeatMode === 'all') {
-            await this.playTrackAtIndex(0);
-        } else {
-            this.updateState({ isPlaying: false });
-        }
-    }
-
     async play() {
-        if (!this.sound) return;
-        this.sound.play();
+        await TrackPlayer.play();
         this.updateState({ isPlaying: true });
     }
 
     async pause() {
-        if (!this.sound) return;
-        this.sound.pause();
+        await TrackPlayer.pause();
         this.updateState({ isPlaying: false });
     }
 
     async togglePlayPause() {
-        if (this.state.isPlaying) {
+        const state = await TrackPlayer.getState();
+        if (state === State.Playing) {
             await this.pause();
         } else {
             await this.play();
@@ -220,120 +205,87 @@ class PlayerService {
     }
 
     async seekTo(seconds: number) {
-        if (!this.sound) return;
-        try {
-            await this.sound.seekTo(seconds);
-            this.updateState({ position: seconds });
-        } catch (error) {
-            console.error('Error seeking:', error);
-        }
+        await TrackPlayer.seekTo(seconds);
+        this.updateState({ position: seconds });
     }
 
     async playNext() {
-        const { currentIndex, queue } = this.state;
-
-        if (currentIndex < queue.length - 1) {
-            await this.playTrackAtIndex(currentIndex + 1);
-        } else if (this.state.repeatMode === 'all') {
-            await this.playTrackAtIndex(0);
+        try {
+            await TrackPlayer.skipToNext();
+            const index = (await TrackPlayer.getCurrentTrack()) ?? this.state.currentIndex + 1;
+            const next = this.state.queue[index];
+            if (next) this.updateState({ currentIndex: index, currentTrack: next, position: 0 });
+        } catch (error) {
+            if (this.state.repeatMode === 'all') {
+                await TrackPlayer.skip(0);
+                const first = this.state.queue[0];
+                if (first) this.updateState({ currentIndex: 0, currentTrack: first, position: 0 });
+            }
         }
     }
 
     async playPrevious() {
-        const { currentIndex, position } = this.state;
-
-        // If more than 3 seconds in, restart the song
-        if (position > 3) {
-            await this.seekTo(0);
-            return;
-        }
-
-        if (currentIndex > 0) {
-            await this.playTrackAtIndex(currentIndex - 1);
+        try {
+            await TrackPlayer.skipToPrevious();
+            const index = (await TrackPlayer.getCurrentTrack()) ?? this.state.currentIndex - 1;
+            const prev = this.state.queue[index];
+            if (prev) this.updateState({ currentIndex: index, currentTrack: prev, position: 0 });
+        } catch (error) {
+            await TrackPlayer.seekTo(0);
         }
     }
 
     async playTrackAtIndex(index: number) {
-        const { queue } = this.state;
-        if (index < 0 || index >= queue.length) return;
-
-        const track = queue[index];
-        if (!track.filePath) return;
-
-        this.updateState({ isLoading: true, currentIndex: index });
-
-        try {
-            if (this.sound) {
-                this.sound.release();
-                this.sound = null;
-            }
-
-            this.sound = createAudioPlayer({ uri: track.filePath });
-            this.sound.addListener('playbackStatusUpdate', this.onPlaybackStatusUpdate);
-            this.sound.play();
-
-            this.updateState({
-                currentTrack: track,
-                isLoading: false,
-                isPlaying: true,
-                position: 0,
-                duration: 0,
-            });
-
-            // Setup lock screen controls after a short delay to ensure player is ready
-            setTimeout(() => this.setupLockScreenControls(track), 100);
-        } catch (error) {
-            console.error('Error loading track:', error);
-            this.updateState({ isLoading: false });
-            Alert.alert(
-                'Playback Error',
-                'The requested song file was not found (it may have been deleted). Please try resyncing your playlist.',
-                [{ text: 'OK' }]
-            );
-        }
+        if (index < 0 || index >= this.state.queue.length) return;
+        await TrackPlayer.skip(index);
+        await TrackPlayer.play();
+        this.updateState({
+            currentIndex: index,
+            currentTrack: this.state.queue[index],
+            isPlaying: true,
+            position: 0,
+        });
     }
 
     toggleRepeatMode() {
         const modes: RepeatMode[] = ['off', 'all', 'one'];
         const currentModeIndex = modes.indexOf(this.state.repeatMode);
         const nextMode = modes[(currentModeIndex + 1) % modes.length];
+        TrackPlayer.setRepeatMode(this.tpRepeat(nextMode));
         this.updateState({ repeatMode: nextMode });
     }
 
-    toggleShuffle() {
-        const { shuffleEnabled, originalQueue, currentTrack, currentIndex } = this.state;
+    async toggleShuffle() {
+        const newShuffle = !this.state.shuffleEnabled;
+        await this.rebuildQueue(newShuffle);
+        this.updateState({ shuffleEnabled: newShuffle });
+    }
 
-        if (!shuffleEnabled) {
-            // Enable shuffle
-            const shuffled = this.shuffleArray([...originalQueue], currentIndex);
-            const newIndex = shuffled.findIndex(t => t.id === currentTrack?.id);
-            this.updateState({
-                shuffleEnabled: true,
-                queue: shuffled,
-                currentIndex: newIndex >= 0 ? newIndex : 0,
-            });
-        } else {
-            // Disable shuffle - restore original order
-            const newIndex = originalQueue.findIndex(t => t.id === currentTrack?.id);
-            this.updateState({
-                shuffleEnabled: false,
-                queue: [...originalQueue],
-                currentIndex: newIndex >= 0 ? newIndex : 0,
-            });
-        }
+    private async rebuildQueue(shuffle: boolean) {
+        const current = this.state.currentTrack;
+        const baseQueue = this.state.originalQueue.length ? this.state.originalQueue : this.state.queue;
+        if (!current || baseQueue.length === 0) return;
+
+        const currentBaseIndex = baseQueue.findIndex((t) => t.id === current.id);
+        const effectiveQueue = shuffle
+            ? this.shuffleArray([...baseQueue], currentBaseIndex >= 0 ? currentBaseIndex : 0)
+            : baseQueue;
+        const newIndex = effectiveQueue.findIndex((t) => t.id === current.id);
+        const position = await TrackPlayer.getPosition();
+
+        await TrackPlayer.reset();
+        await TrackPlayer.add(effectiveQueue.map((t) => this.toTPTrack(t)));
+        await TrackPlayer.setRepeatMode(this.tpRepeat(this.state.repeatMode));
+        await TrackPlayer.skip(newIndex >= 0 ? newIndex : 0);
+        if (position > 0) await TrackPlayer.seekTo(position);
+        if (this.state.isPlaying) await TrackPlayer.play();
+
+        this.updateState({ queue: effectiveQueue, currentIndex: newIndex >= 0 ? newIndex : 0, currentTrack: current });
     }
 
     async stop() {
-        if (this.sound) {
-            this.sound.pause();
-            try {
-                this.sound.clearLockScreenControls();
-            } catch (error) {
-                console.error('Failed to clear lock screen controls:', error);
-            }
-            this.sound.release();
-            this.sound = null;
-        }
+        await TrackPlayer.stop();
+        await TrackPlayer.reset();
         this.updateState({
             currentTrack: null,
             isPlaying: false,
@@ -348,49 +300,12 @@ class PlayerService {
 
     canPlayNext(): boolean {
         const { currentIndex, queue, repeatMode } = this.state;
-        return currentIndex < queue.length - 1 || repeatMode === 'all';
+        return queue.length > 0 && (currentIndex < queue.length - 1 || repeatMode === 'all');
     }
 
     canPlayPrevious(): boolean {
-        const { currentIndex, position } = this.state;
-        return currentIndex > 0 || position > 3;
-    }
-
-    moveQueueItem(fromIndex: number, toIndex: number) {
-        const { queue, currentIndex } = this.state;
-        const newQueue = [...queue];
-        const [movedItem] = newQueue.splice(fromIndex, 1);
-        newQueue.splice(toIndex, 0, movedItem);
-
-        let newCurrentIndex = currentIndex;
-        if (fromIndex === currentIndex) {
-            newCurrentIndex = toIndex;
-        } else if (fromIndex < currentIndex && toIndex >= currentIndex) {
-            newCurrentIndex = currentIndex - 1;
-        } else if (fromIndex > currentIndex && toIndex <= currentIndex) {
-            newCurrentIndex = currentIndex + 1;
-        }
-
-        this.updateState({
-            queue: newQueue,
-            currentIndex: newCurrentIndex,
-        });
-    }
-
-    removeFromQueue(index: number) {
-        const { queue, currentIndex } = this.state;
-        if (index === currentIndex) return; // Can't remove currently playing
-
-        const newQueue = queue.filter((_, i) => i !== index);
-        let newCurrentIndex = currentIndex;
-        if (index < currentIndex) {
-            newCurrentIndex = currentIndex - 1;
-        }
-
-        this.updateState({
-            queue: newQueue,
-            currentIndex: newCurrentIndex,
-        });
+        const { currentIndex, queue } = this.state;
+        return queue.length > 0 && currentIndex > 0;
     }
 }
 

@@ -144,7 +144,6 @@ const MyPlaylistsScreen: React.FC<MyPlaylistsScreenProps> = ({ navigation }) => 
                     icon="folder-open"
                     iconColor={theme.colors.primary}
                     onPress={openDownloadsFolder}
-                    tooltip="Open Downloads Folder"
                 />
             ),
         });

@@ -11,7 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Slider from '@react-native-community/slider';
-import TextTicker from 'react-native-text-ticker';
+import { ScrollingText } from '../../components/common/ScrollingText';
 import { useAppContext } from '../../store/AppContext';
 import { usePlayer } from '../../hooks/usePlayer';
 import { RootStackParamList } from '../../types';
@@ -135,17 +135,12 @@ const PlayerScreen: React.FC<PlayerScreenProps> = ({ route, navigation }) => {
 
         {/* Track Info */}
         <View style={styles.info}>
-          <TextTicker
-            style={[styles.title, { width: '100%', color: theme.colors.onSurface, fontSize: 24, lineHeight: 32 }]}
-            duration={15000}
-            loop
-            bounce={false}
-            repeatSpacer={50}
-            marqueeDelay={1000}
-            scrollSpeed={30}
-          >
-            {currentTrack?.title || track.title}
-          </TextTicker>
+          <ScrollingText
+            text={currentTrack?.title || track.title}
+            style={[styles.title, { color: theme.colors.onSurface }]}
+            speed={50}
+            delay={1000}
+          />
           <Text variant="titleMedium" style={[styles.artist, { color: theme.colors.onSurfaceVariant }]}>
             {currentTrack?.artist || track.artist}
           </Text>

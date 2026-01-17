@@ -114,7 +114,7 @@ export class YouTubeApiService {
       // Get access token from argument or storage
       let accessToken = token;
       if (!accessToken) {
-        accessToken = await SecureStore.getItemAsync('access_token');
+        accessToken = (await SecureStore.getItemAsync('access_token')) || undefined;
       }
 
       if (!accessToken) {

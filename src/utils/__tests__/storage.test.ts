@@ -184,6 +184,7 @@ describe('storage utilities', () => {
         autoSyncEnabled: true,
         storageCleanupEnabled: false,
         theme: 'auto',
+        storageLocationType: 'internal',
       };
 
       (mockedAsyncStorage.getItem as jest.Mock).mockResolvedValue(JSON.stringify(mockSettings));
@@ -220,6 +221,7 @@ describe('storage utilities', () => {
         autoSyncEnabled: true,
         storageCleanupEnabled: false,
         theme: 'auto',
+        storageLocationType: 'internal',
       };
 
       await saveSettings(mockSettings);
@@ -241,6 +243,7 @@ describe('storage utilities', () => {
         autoSyncEnabled: true,
         storageCleanupEnabled: false,
         theme: 'auto',
+        storageLocationType: 'internal',
       };
 
       await expect(saveSettings(mockSettings)).rejects.toThrow('Save error');
