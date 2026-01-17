@@ -1,17 +1,17 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   StyleSheet,
   Image,
   Dimensions,
   TouchableOpacity,
-  Animated,
-  PanResponder,
 } from 'react-native';
 import { Text, IconButton, useTheme, Surface } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import Slider from '@react-native-community/slider';
+import TextTicker from 'react-native-text-ticker';
 import { useAppContext } from '../../store/AppContext';
 import { usePlayer } from '../../hooks/usePlayer';
 import { RootStackParamList } from '../../types';
@@ -36,7 +36,6 @@ const PlayerScreen: React.FC<PlayerScreenProps> = ({ route, navigation }) => {
   const [queueVisible, setQueueVisible] = useState(false);
   const [isSeeking, setIsSeeking] = useState(false);
   const [seekPosition, setSeekPosition] = useState(0);
-  const seekAnimValue = useRef(new Animated.Value(0)).current;
 
   const {
     currentTrack,
@@ -80,31 +79,6 @@ const PlayerScreen: React.FC<PlayerScreenProps> = ({ route, navigation }) => {
       navigation.setParams({ trackId: currentTrack.id });
     }
   }, [currentTrack?.id]);
-
-  // Seekbar pan responder
-  const panResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: () => true,
-      onPanResponderGrant: (evt) => {
-        setIsSeeking(true);
-        const x = evt.nativeEvent.locationX;
-        const progress = Math.max(0, Math.min(1, x / SEEKBAR_WIDTH));
-        setSeekPosition(progress * duration);
-        seekAnimValue.setValue(progress);
-      },
-      onPanResponderMove: (evt, gestureState) => {
-        const x = Math.max(0, Math.min(SEEKBAR_WIDTH, gestureState.moveX - 24));
-        const progress = x / SEEKBAR_WIDTH;
-        setSeekPosition(progress * duration);
-        seekAnimValue.setValue(progress);
-      },
-      onPanResponderRelease: async () => {
-        setIsSeeking(false);
-        await seekTo(seekPosition);
-      },
-    })
-  ).current;
 
   const displayPosition = isSeeking ? seekPosition : position;
   const progress = duration > 0 ? displayPosition / duration : 0;
@@ -161,9 +135,17 @@ const PlayerScreen: React.FC<PlayerScreenProps> = ({ route, navigation }) => {
 
         {/* Track Info */}
         <View style={styles.info}>
-          <Text variant="headlineSmall" style={styles.title} numberOfLines={2}>
+          <TextTicker
+            style={[styles.title, { width: '100%', color: theme.colors.onSurface, fontSize: 24, lineHeight: 32 }]}
+            duration={15000}
+            loop
+            bounce={false}
+            repeatSpacer={50}
+            marqueeDelay={1000}
+            scrollSpeed={30}
+          >
             {currentTrack?.title || track.title}
-          </Text>
+          </TextTicker>
           <Text variant="titleMedium" style={[styles.artist, { color: theme.colors.onSurfaceVariant }]}>
             {currentTrack?.artist || track.artist}
           </Text>
@@ -171,27 +153,24 @@ const PlayerScreen: React.FC<PlayerScreenProps> = ({ route, navigation }) => {
 
         {/* Seekbar */}
         <View style={styles.seekbarContainer}>
-          <View
-            style={[styles.seekbarTrack, { backgroundColor: theme.colors.surfaceVariant }]}
-            {...panResponder.panHandlers}
-          >
-            <View
-              style={[
-                styles.seekbarProgress,
-                {
-                  backgroundColor: theme.colors.primary,
-                  width: `${progress * 100}%`,
-                },
-              ]}
-            />
-            <View
-              style={[
-                styles.seekbarThumb,
-                {
-                  backgroundColor: theme.colors.primary,
-                  left: progress * SEEKBAR_WIDTH - 8,
-                },
-              ]}
+          <View style={{ transform: [{ scaleX: 1.0 }, { scaleY: 1.5 }] }}>
+            <Slider
+              style={styles.seekbarSlider}
+              minimumValue={0}
+              maximumValue={Math.max(duration, 0)}
+              value={displayPosition}
+              minimumTrackTintColor={theme.colors.primary}
+              maximumTrackTintColor={theme.colors.surfaceVariant}
+              thumbTintColor={theme.colors.primary}
+              tapToSeek
+              onValueChange={(value) => {
+                setIsSeeking(true);
+                setSeekPosition(value);
+              }}
+              onSlidingComplete={async (value) => {
+                setIsSeeking(false);
+                await seekTo(value);
+              }}
             />
           </View>
           <View style={styles.timeContainer}>
@@ -301,10 +280,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 16,
     elevation: 8,
+    width: '100%',
   },
   artwork: {
-    width: SCREEN_WIDTH - 80,
-    height: SCREEN_WIDTH - 80,
+    width: '100%',
+    aspectRatio: 1,
     borderRadius: 12,
   },
   placeholderArtwork: {
@@ -328,24 +308,9 @@ const styles = StyleSheet.create({
     width: '100%',
     marginBottom: 24,
   },
-  seekbarTrack: {
-    height: 6,
-    borderRadius: 3,
-    position: 'relative',
-  },
-  seekbarProgress: {
-    height: '100%',
-    borderRadius: 3,
-    position: 'absolute',
-    left: 0,
-    top: 0,
-  },
-  seekbarThumb: {
-    position: 'absolute',
-    top: -5,
-    width: 16,
-    height: 16,
-    borderRadius: 8,
+  seekbarSlider: {
+    width: '100%',
+    height: 40,
   },
   timeContainer: {
     flexDirection: 'row',

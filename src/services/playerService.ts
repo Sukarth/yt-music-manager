@@ -46,7 +46,8 @@ class PlayerService {
             await setAudioModeAsync({
                 shouldPlayInBackground: true,
                 playsInSilentMode: true,
-                interruptionMode: 'doNotMix', // Required for lock screen controls
+                interruptionMode: 'doNotMix',
+                interruptionModeAndroid: 'doNotMix',
                 shouldRouteThroughEarpiece: false,
             });
             this.isInitialized = true;
@@ -78,11 +79,18 @@ class PlayerService {
         if (!this.sound) return;
 
         try {
-            this.sound.setActiveForLockScreen(true, {
-                title: track.title,
-                artist: track.artist || 'Unknown Artist',
-                artworkUrl: track.thumbnailUrl || undefined,
-            });
+            this.sound.setActiveForLockScreen(
+                true,
+                {
+                    title: track.title,
+                    artist: track.artist || 'Unknown Artist',
+                    artworkUrl: track.thumbnailUrl || undefined,
+                },
+                {
+                    showSeekForward: true,
+                    showSeekBackward: true,
+                }
+            );
         } catch (error) {
             console.error('Failed to setup lock screen controls:', error);
         }
@@ -109,7 +117,7 @@ class PlayerService {
 
         try {
             if (this.sound) {
-                this.sound.remove();
+                this.sound.release();
                 this.sound = null;
             }
 
@@ -256,7 +264,7 @@ class PlayerService {
 
         try {
             if (this.sound) {
-                this.sound.remove();
+                this.sound.release();
                 this.sound = null;
             }
 
@@ -323,7 +331,7 @@ class PlayerService {
             } catch (error) {
                 console.error('Failed to clear lock screen controls:', error);
             }
-            this.sound.remove();
+            this.sound.release();
             this.sound = null;
         }
         this.updateState({

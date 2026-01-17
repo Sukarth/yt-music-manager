@@ -41,7 +41,9 @@
     "react-native": "0.81.5",
     "react-native-paper": "^5.14.5",
     "react-native-safe-area-context": "^5.6.2",
-    "react-native-screens": "^4.19.0"
+    "react-native-screens": "^4.19.0",
+    "react-native-text-ticker": "^1.15.0",
+    "react-native-track-player": "^4.1.2"
   },
   "devDependencies": {
     "@expo/vector-icons": "^15.0.3",
