@@ -136,29 +136,29 @@ const RootNavigator = () => {
 
   const navigationTheme = theme.dark
     ? {
-      ...DarkTheme,
-      colors: {
-        ...DarkTheme.colors,
-        primary: theme.colors.primary,
-        background: theme.colors.background,
-        card: theme.colors.surface,
-        text: theme.colors.onSurface,
-        border: theme.colors.surfaceVariant,
-        notification: theme.colors.error,
-      },
-    }
+        ...DarkTheme,
+        colors: {
+          ...DarkTheme.colors,
+          primary: theme.colors.primary,
+          background: theme.colors.background,
+          card: theme.colors.surface,
+          text: theme.colors.onSurface,
+          border: theme.colors.surfaceVariant,
+          notification: theme.colors.error,
+        },
+      }
     : {
-      ...DefaultTheme,
-      colors: {
-        ...DefaultTheme.colors,
-        primary: theme.colors.primary,
-        background: theme.colors.background,
-        card: theme.colors.surface,
-        text: theme.colors.onSurface,
-        border: theme.colors.surfaceVariant,
-        notification: theme.colors.error,
-      },
-    };
+        ...DefaultTheme,
+        colors: {
+          ...DefaultTheme.colors,
+          primary: theme.colors.primary,
+          background: theme.colors.background,
+          card: theme.colors.surface,
+          text: theme.colors.onSurface,
+          border: theme.colors.surfaceVariant,
+          notification: theme.colors.error,
+        },
+      };
 
   return (
     <NavigationContainer theme={navigationTheme}>

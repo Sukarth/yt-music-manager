@@ -52,8 +52,8 @@ const PlayerScreen: React.FC<PlayerScreenProps> = ({ route, navigation }) => {
   const track = state.tracks.find(t => t.id === trackId);
   const playlistTracks = track
     ? state.tracks
-      .filter(t => t.playlistId === track.playlistId && t.downloadStatus === 'completed')
-      .sort((a, b) => a.position - b.position)
+        .filter(t => t.playlistId === track.playlistId && t.downloadStatus === 'completed')
+        .sort((a, b) => a.position - b.position)
     : [];
 
   // Load track if not already playing
