@@ -29,5 +29,3 @@ export const playbackService = async function () {
     }
   });
 };
-
-module.exports = playbackService;
