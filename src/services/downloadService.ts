@@ -2,7 +2,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Track, Playlist } from '../types';
 import { sanitizeFileName } from '../utils/formatters';
-import { BACKEND_URL, STORAGE_KEYS } from '../constants';
+import { DEFAULT_BACKEND_URL, STORAGE_KEYS } from '../constants';
 import { addToDownloadIndex, removeFromDownloadIndex } from '../utils/downloadIndex';
 
 type DownloadResumable = ReturnType<typeof FileSystem.createDownloadResumable>;
@@ -17,6 +17,11 @@ export class DownloadService {
     string,
     (progress: number, downloadedBytes: number, totalBytes: number) => void
   > = new Map();
+  private backendUrl: string = DEFAULT_BACKEND_URL;
+
+  setBackendUrl(url: string) {
+    this.backendUrl = url;
+  }
 
   private getSafDisplayNameFromUri(uri: string): string {
     const marker = 'document/';
@@ -24,10 +29,21 @@ export class DownloadService {
     if (idx >= 0) {
       const encodedDocId = uri.substring(idx + marker.length);
       const decodedDocId = decodeURIComponent(encodedDocId);
-      const parts = decodedDocId.split('/');
+      // Strip trailing slash if present to avoid empty string splits
+      const cleanDocId = decodedDocId.endsWith('/') ? decodedDocId.slice(0, -1) : decodedDocId;
+      const parts = cleanDocId.split('/');
       const last = parts[parts.length - 1];
+
+      // Some providers (e.g. SD card root) might format ID as "volume:Folder".
+      // We want just "Folder".
+      if (last && last.includes(':')) {
+        const colonParts = last.split(':');
+        return colonParts[colonParts.length - 1];
+      }
+
       if (last) return last;
     }
+    // Fallback for unexpected URI formats
     return decodeURIComponent(uri.split('/').pop() || '');
   }
 
@@ -38,7 +54,7 @@ export class DownloadService {
     onProgress?: (progress: number, downloadedBytes: number, totalBytes: number) => void
   ): Promise<string> {
     // UPDATED: Now points to the stream endpoint instead of just getting metadata
-    const downloadUrl = `${BACKEND_URL}/api/download?videoId=${track.youtubeId}`;
+    const downloadUrl = `${this.backendUrl}/api/download?videoId=${track.youtubeId}`;
     const fileName = sanitizeFileName(`${track.artist} - ${track.title}.m4a`);
 
     // Determine download location from persisted settings.
@@ -353,12 +369,28 @@ export class DownloadService {
         : await this.getOrCreateSAFFolder(rootUri, 'YT Music Manager');
       const playlistFolderUri = await this.getOrCreateSAFFolder(appFolderUri, playlistFolderName);
 
-      // Create M3U inside the playlist folder
-      m3uPath = await FileSystem.StorageAccessFramework.createFileAsync(
-        playlistFolderUri,
-        `${sanitizeFileName(playlist.name)}.m3u`,
-        'audio/x-mpegurl'
-      );
+      // Check if M3U already exists to prevent duplication
+      const m3uName = `${sanitizeFileName(playlist.name)}.m3u`;
+      const children = await FileSystem.StorageAccessFramework.readDirectoryAsync(playlistFolderUri);
+      let existingM3uUri: string | null = null;
+
+      for (const childUri of children) {
+        if (this.getSafDisplayNameFromUri(childUri) === m3uName) {
+          existingM3uUri = childUri;
+          break;
+        }
+      }
+
+      if (existingM3uUri) {
+        m3uPath = existingM3uUri;
+      } else {
+        // Create M3U inside the playlist folder
+        m3uPath = await FileSystem.StorageAccessFramework.createFileAsync(
+          playlistFolderUri,
+          m3uName,
+          'audio/x-mpegurl'
+        );
+      }
     } else {
       const playlistDir = `${getDocumentDirectory()}YTMusicManager/${playlistFolderName}/`;
       m3uPath = `${playlistDir}${sanitizeFileName(playlist.name)}.m3u`;

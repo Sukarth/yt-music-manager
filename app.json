@@ -10,7 +10,7 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#0E4B8D"
     },
     "ios": {
       "supportsTablet": true,
@@ -28,7 +28,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#0E4B8D"
       },
       "package": "com.sukarth.ytmusicmanager",
       "googleServicesFile": "./google-services.json",
@@ -56,6 +56,7 @@
       "expo-file-system",
       "expo-document-picker",
       "expo-secure-store",
+      "./plugins/withAndroidSigning",
       [
         "expo-build-properties",
         {

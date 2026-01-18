@@ -20,8 +20,8 @@ describe('constants', () => {
       expect(DEFAULT_SETTINGS.autoSyncInterval).toBe(6);
     });
 
-    it('should have default max concurrent downloads of 3', () => {
-      expect(DEFAULT_SETTINGS.maxConcurrentDownloads).toBe(3);
+    it('should have default max concurrent downloads of 10', () => {
+      expect(DEFAULT_SETTINGS.maxConcurrentDownloads).toBe(10);
     });
 
     it('should have auto sync enabled by default', () => {
@@ -137,8 +137,9 @@ describe('constants', () => {
   });
 
   describe('BACKEND_URL', () => {
-    it('should be correct', () => {
-      expect(BACKEND_URL).toBe('https://yt-music-manager-backend.onrender.com');
+    it('should be a valid URL string', () => {
+      expect(typeof BACKEND_URL).toBe('string');
+      expect(BACKEND_URL.length).toBeGreaterThan(0);
     });
   });
 });

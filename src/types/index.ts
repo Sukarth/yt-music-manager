@@ -34,13 +34,14 @@ export interface DownloadQueueItem {
 
 export interface AppSettings {
   downloadPath: string; // Internal use. If custom, this is the URI.
-  storageLocationType: 'internal' | 'custom'; // New field
+  storageLocationType: 'internal' | 'custom';
   audioQuality: 128 | 192 | 256 | 320;
   autoSyncInterval: 1 | 3 | 6 | 12 | 24;
   maxConcurrentDownloads: number;
   autoSyncEnabled: boolean;
   storageCleanupEnabled: boolean;
   theme: 'light' | 'dark' | 'auto';
+  backendUrl: string;
 }
 
 export interface AuthState {

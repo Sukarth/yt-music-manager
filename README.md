@@ -1,393 +1,98 @@
-# YT Music Manager - Mobile App
+# YT Music Manager
 
-A production-ready React Native mobile application for managing and downloading YouTube Music playlists on iOS and Android devices.
+A React Native mobile app for downloading and managing (syncing) YouTube Music playlists for offline playback on Android and iOS.
 
 ## Features
 
-### Core Functionality
-
-- **Playlist Management**: Add, remove, and organize YouTube Music playlists
-- **Smart Download System**: Download playlists in MP3 format with configurable quality
-- **Sync Mechanism**: Keep playlists up-to-date with automatic sync
-- **Background Sync**: Auto-sync playlists even when app is closed
-- **Music Player**: Built-in player with playback controls
-- **Storage Management**: Monitor and manage downloaded music storage
-- **Search & Filter**: Find playlists and tracks quickly
-- **M3U Export**: Generate M3U playlists for external players
-
-### Authentication
-
-- Google OAuth Sign-In for private playlists
-- Public playlist support without authentication
-- Secure token storage with encryption
-
-### Settings & Customization
-
-- Audio quality selection (128-320 kbps)
-- Concurrent download configuration
-- Auto-sync interval customization
+- Playlist management (add, sync, delete YouTube Music playlists)
+- Offline downloads with configurable audio quality (128-320 kbps M4A)
+- Custom storage location support (Android Storage Access Framework)
+- Smart sync with preview and duplicate detection
+- Background auto-sync with configurable intervals
+- Google OAuth authentication for private playlists
+- Built-in music player with custom seekbar, queue management, and background playback
+- M3U playlist file support for external players
+- Storage monitoring and management
 - Dark mode support
-- Storage cleanup options
-
-## Tech Stack
-
-- **Framework**: React Native with Expo (Managed Workflow)
-- **Language**: TypeScript
-- **UI Library**: React Native Paper (Material Design)
-- **Navigation**: React Navigation v7
-- **State Management**: React Context API + Hooks
-- **Storage**: AsyncStorage + Expo SecureStore
-- **Audio**: Expo AV
-- **Testing**: Jest + React Native Testing Library
-- **Linting**: ESLint + Prettier
-
-## Prerequisites
-
-- Node.js 18+
-- npm or yarn
-- Expo CLI
-- iOS Simulator (macOS) or Android Emulator
-- Expo Go app (for testing on physical devices)
 
 ## Installation
 
-1. Clone the repository:
+### Download from Releases
 
-```bash
-git clone <repository-url>
-cd yt-music-manager
-```
+1. Go to the [Releases](https://github.com/Sukarth/yt-music-manager/releases) page
+2. Download the latest APK file (Android) or IPA file (iOS)
+3. Install on your device
 
-2. Install dependencies:
+### Build from Source
 
-```bash
-npm install
-```
-
-3. Configure environment (optional):
-
-```bash
-# Update src/services/authService.ts with your Google OAuth Client ID
-GOOGLE_CLIENT_ID='your-google-client-id'
-```
-
-## Development
-
-### Running the App
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for detailed development setup and build instructions.
 
-Start the development server:
-
-```bash
-npm start
-```
+## Requirements
 
-Run on specific platforms:
+- Android 8.0+ or iOS 13+
+- Backend server running (see: [yt-music-manager-backend](https://github.com/Sukarth/yt-music-manager-backend) which is hosted for free on Render, and connects to this app by default)
+- Google account (optional, for accessing private playlists)
 
-```bash
-npm run android  # Android
-npm run ios      # iOS (macOS only)
-npm run web      # Web (limited functionality)
-```
+## Backend Setup
 
-### Code Quality
+This app requires a backend server to download YouTube audio using the yt-dlp library. By default, it connects to a free hosted instance on Render from the [yt-music-manager-backend](https://github.com/Sukarth/yt-music-manager-backend) repository, but you can deploy your own if you wish for better reliability.
 
-Run linter:
+1. Deploy [yt-music-manager-backend](https://github.com/Sukarth/yt-music-manager-backend) to your preferred hosting service
+2. Update the backend URL:
+   - In the app: Go to Settings and enter your backend URL
+   - Or before building: Update `BACKEND_URL` in `src/constants/index.ts`
 
-```bash
-npm run lint
-npm run lint:fix  # Auto-fix issues
-```
+## Usage
 
-Format code:
+1. Launch the app
+2. (Optional) Sign in with Google to access private playlists
+3. Add playlists using YouTube playlist URLs
+4. Download and sync playlists
+5. Play music offline with the built-in player
 
-```bash
-npm run format
-```
+## Google OAuth Configuration (Optional)
 
-Type checking:
+Required only if you want to access private YouTube playlists.
 
-```bash
-npm run typecheck
-```
+1. Go to [Google Cloud Console](https://console.cloud.google.com)
+2. Create a project and enable YouTube Data API v3
+3. Create OAuth 2.0 credentials:
+   - Web Client ID (for backend)
+   - Android Client ID (for the app, using your app's SHA-1 fingerprint)
+4. Download `google-services.json` and place in project root (for building)
+5. Update `GOOGLE_WEB_CLIENT_ID` in `src/services/authService.ts` (for building)
 
-### Testing
+See [google-services.json.example](./google-services.json.example) for structure reference.
 
-Run tests:
+## Tech Stack
 
-```bash
-npm test
-```
+- React Native 0.81.5 with Expo SDK 54
+- TypeScript
+- React Navigation v7
+- React Native Track Player for audio playback
+- Context API for state management
+- AsyncStorage and SecureStore for data persistence
 
-Run tests with coverage:
-
-```bash
-npm run test:coverage
-```
-
-Watch mode:
-
-```bash
-npm run test:watch
-```
-
-## Project Structure
-
-```
-yt-music-manager/
-├── src/
-│   ├── components/          # Reusable UI components
-│   │   ├── common/          # Generic components
-│   │   ├── playlist/        # Playlist-specific components
-│   │   └── player/          # Music player components
-│   ├── screens/             # Screen components
-│   │   ├── Home/            # Home screen
-│   │   ├── AddPlaylist/     # Add playlist screen
-│   │   ├── PlaylistDetail/  # Playlist detail screen
-│   │   ├── Settings/        # Settings screen
-│   │   ├── Player/          # Music player screen
-│   │   └── Sync/            # Sync preview screen
-│   ├── navigation/          # Navigation configuration
-│   ├── services/            # API and business logic services
-│   │   ├── youtubeApi.ts    # YouTube API integration
-│   │   ├── downloadService.ts # Download management
-│   │   └── authService.ts   # Authentication
-│   ├── store/               # State management
-│   │   └── AppContext.tsx   # Global app state
-│   ├── hooks/               # Custom React hooks
-│   ├── utils/               # Utility functions
-│   ├── types/               # TypeScript type definitions
-│   └── constants/           # App constants
-├── assets/                  # Images and static files
-├── __tests__/              # Test files
-├── App.tsx                 # Root component
-├── app.json                # Expo configuration
-├── tsconfig.json           # TypeScript configuration
-├── jest.config.js          # Jest configuration
-├── .eslintrc.js            # ESLint configuration
-└── .prettierrc.js          # Prettier configuration
-```
-
-## Building for Production
-
-### Android (APK/AAB)
-
-1. Install EAS CLI:
-
-```bash
-npm install -g eas-cli
-```
-
-2. Configure EAS:
-
-```bash
-eas build:configure
-```
-
-3. Build APK:
-
-```bash
-eas build --platform android --profile preview
-```
-
-4. Build for Play Store:
-
-```bash
-eas build --platform android --profile production
-```
-
-### iOS (IPA)
-
-1. Configure Apple Developer account in EAS
-
-2. Build for iOS:
-
-```bash
-eas build --platform ios --profile production
-```
-
-### Build Profiles
-
-Build profiles are configured in `eas.json`:
-
-- **development**: Development builds with debugging
-- **preview**: APK builds for testing
-- **production**: Optimized production builds
-
-## Configuration
-
-### App Configuration (app.json)
-
-Key settings in `app.json`:
-
-- Bundle identifiers
-- App name and version
-- Permissions
-- Splash screen and icons
-- Platform-specific settings
-
-### Environment Variables
-
-For production, set the following:
-
-- `GOOGLE_CLIENT_ID`: Google OAuth client ID
-- YouTube API key (if needed for public playlists)
-
-## API Integration
-
-### YouTube API
-
-The app uses YouTube Data API v3 for:
-
-- Fetching playlist information
-- Retrieving video details
-- Syncing playlist changes
-
-**Note**: For production, you'll need to implement a backend bridge service for yt-dlp integration to download actual audio files. The current implementation includes placeholder URLs in `downloadService.ts`.
-
-### Recommended Backend Setup
-
-1. Create a Node.js/Python backend with yt-dlp
-2. Expose REST API for download requests
-3. Update `getDownloadUrl()` in `downloadService.ts`
-4. Implement authentication and rate limiting
-
-## Deployment
-
-### App Store (iOS)
-
-1. Build production IPA
-2. Upload to App Store Connect
-3. Configure app metadata
-4. Submit for review
-
-### Google Play Store (Android)
-
-1. Build production AAB
-2. Create app in Play Console
-3. Upload AAB and configure store listing
-4. Submit for review
-
-## Troubleshooting
-
-### Common Issues
-
-**Build Failures**:
-
-- Clear cache: `expo start -c`
-- Reinstall dependencies: `rm -rf node_modules && npm install`
-- Reset Metro bundler: `npx react-native start --reset-cache`
-
-**iOS Issues**:
-
-- Run `pod install` in `ios/` directory
-- Clean build: `cd ios && xcodebuild clean`
-
-**Android Issues**:
-
-- Clean Gradle: `cd android && ./gradlew clean`
-- Clear build cache: `cd android && ./gradlew cleanBuildCache`
-
-### Debug Mode
-
-Enable React Native debugging:
-
-1. Shake device (physical) or Cmd+D (iOS) / Cmd+M (Android)
-2. Select "Debug" from menu
-3. Open Chrome DevTools
-
-## Testing Strategy
-
-### Unit Tests
-
-- Utility functions
-- Service logic
-- State management
-
-### Component Tests
-
-- UI component rendering
-- User interactions
-- Props validation
-
-### Integration Tests
-
-- API integration
-- Navigation flows
-- Data persistence
-
-### E2E Tests (Optional)
-
-- Complete user workflows
-- Critical paths testing
-- Cross-platform validation
-
-## Performance Optimization
-
-- Lazy loading for screens
-- Optimized image loading
-- Efficient state updates
-- Debounced search
-- Concurrent download management
-- Background task optimization
-
-## Security
-
-- Secure token storage (Expo SecureStore)
-- HTTPS for all API requests
-- Input validation and sanitization
-- No sensitive data in logs
-- Proper permission handling
-
-## Contributing
-
-1. Fork the repository
-2. Create feature branch: `git checkout -b feature/amazing-feature`
-3. Commit changes: `git commit -m 'Add amazing feature'`
-4. Push to branch: `git push origin feature/amazing-feature`
-5. Open pull request
-
-### Code Style Guidelines
-
-- Follow TypeScript best practices
-- Use functional components with hooks
-- Write meaningful commit messages
-- Add tests for new features
-- Update documentation
 
 ## License
 
-This project is licensed under the MIT License.
+MIT License. see [LICENSE](./LICENSE) file for more details.
+
+## Contributing & Development
+
+Contributions are welcome! See [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines and all development info/instructions.
 
 ## Support
 
-For issues and questions:
+- Report issues on [GitHub Issues](https://github.com/Sukarth/yt-music-manager/issues)
+- Check [CONTRIBUTING.md](./CONTRIBUTING.md) for troubleshooting common issues
 
-- Open an issue on GitHub
-- Check existing documentation
-- Review troubleshooting section
+## Changelog
 
-## Roadmap
-
-### Future Enhancements
-
-- [ ] Offline mode improvements
-- [ ] Playlist sharing
-- [ ] Social features
-- [ ] Advanced audio controls
-- [ ] Multiple quality downloads
-- [ ] Playlist analytics
-- [ ] Export to other formats
-- [ ] Cloud backup integration
-
-## Acknowledgments
-
-- React Native community
-- Expo team
-- React Navigation
-- React Native Paper
-- All open-source contributors
+See [CHANGELOG.md](./CHANGELOG.md) for version history and release notes.
 
 ---
 
-**Version**: 1.0.0  
-**Last Updated**: 2026-01-02
+<center>
+
+Built with ❤️ by [Sukarth](https://github.com/Sukarth)

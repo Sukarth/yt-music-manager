@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   StyleSheet,
@@ -10,8 +10,8 @@ import { Text, IconButton, useTheme, Surface } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import Slider from '@react-native-community/slider';
 import { ScrollingText } from '../../components/common/ScrollingText';
+import { CustomSeekbar } from '../../components/player/CustomSeekbar';
 import { useAppContext } from '../../store/AppContext';
 import { usePlayer } from '../../hooks/usePlayer';
 import { RootStackParamList } from '../../types';
@@ -19,7 +19,6 @@ import { formatDuration } from '../../utils/formatters';
 import QueueModal from '../../components/player/QueueModal';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const SEEKBAR_WIDTH = SCREEN_WIDTH - 48;
 
 type PlayerScreenRouteProp = RouteProp<RootStackParamList, 'Player'>;
 type PlayerScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Player'>;
@@ -34,8 +33,6 @@ const PlayerScreen: React.FC<PlayerScreenProps> = ({ route, navigation }) => {
   const { state } = useAppContext();
   const theme = useTheme();
   const [queueVisible, setQueueVisible] = useState(false);
-  const [isSeeking, setIsSeeking] = useState(false);
-  const [seekPosition, setSeekPosition] = useState(0);
 
   const {
     currentTrack,
@@ -80,8 +77,43 @@ const PlayerScreen: React.FC<PlayerScreenProps> = ({ route, navigation }) => {
     }
   }, [currentTrack?.id]);
 
-  const displayPosition = isSeeking ? seekPosition : position;
-  const progress = duration > 0 ? displayPosition / duration : 0;
+  // Safe values for seekbar
+  const safePosition = Number.isFinite(position) ? position : 0;
+  const safeDuration = Number.isFinite(duration) && duration > 0 ? duration : 1;
+
+  const [isSeeking, setIsSeeking] = useState(false);
+  const [previewPosition, setPreviewPosition] = useState(0);
+  const [pendingSeekTarget, setPendingSeekTarget] = useState<number | null>(null);
+  const pendingSeekTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Clear pending target once the player catches up (prevents thumb "teleport" flash).
+  useEffect(() => {
+    if (pendingSeekTarget == null) return;
+    if (Math.abs(safePosition - pendingSeekTarget) < 0.35) {
+      setPendingSeekTarget(null);
+      if (pendingSeekTimeoutRef.current) {
+        clearTimeout(pendingSeekTimeoutRef.current);
+        pendingSeekTimeoutRef.current = null;
+      }
+    }
+  }, [safePosition, pendingSeekTarget]);
+
+  useEffect(() => {
+    return () => {
+      if (pendingSeekTimeoutRef.current) {
+        clearTimeout(pendingSeekTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const displayedPosition = isSeeking
+    ? previewPosition
+    : (pendingSeekTarget ?? safePosition);
+
+  const handleSeek = async (value: number) => {
+    // if (__DEV__) console.log('[PlayerScreen] Seeking to:', value);
+    await seekTo(value);
+  };
 
   const getRepeatIcon = () => {
     switch (repeatMode) {
@@ -148,32 +180,49 @@ const PlayerScreen: React.FC<PlayerScreenProps> = ({ route, navigation }) => {
 
         {/* Seekbar */}
         <View style={styles.seekbarContainer}>
-          <View style={{ transform: [{ scaleX: 1.0 }, { scaleY: 1.5 }] }}>
-            <Slider
-              style={styles.seekbarSlider}
-              minimumValue={0}
-              maximumValue={Math.max(duration, 0)}
-              value={displayPosition}
-              minimumTrackTintColor={theme.colors.primary}
-              maximumTrackTintColor={theme.colors.surfaceVariant}
-              thumbTintColor={theme.colors.primary}
-              tapToSeek
-              onValueChange={(value) => {
-                setIsSeeking(true);
-                setSeekPosition(value);
-              }}
-              onSlidingComplete={async (value) => {
-                setIsSeeking(false);
-                await seekTo(value);
-              }}
-            />
-          </View>
+          {isSeeking && (
+            <Text
+              variant="bodySmall"
+              style={[styles.seekingLabel, { color: theme.colors.onSurfaceVariant }]}
+            >
+              Seeking to {formatDuration(previewPosition)}
+            </Text>
+          )}
+          <CustomSeekbar
+            value={displayedPosition}
+            maximumValue={safeDuration}
+            onSeek={handleSeek}
+            onSeekStart={(value) => {
+              setIsSeeking(true);
+              setPreviewPosition(value);
+            }}
+            onSeekPreview={(value) => {
+              setPreviewPosition(value);
+            }}
+            onSeekEnd={(value) => {
+              setIsSeeking(false);
+              setPreviewPosition(value);
+              setPendingSeekTarget(value);
+
+              if (pendingSeekTimeoutRef.current) {
+                clearTimeout(pendingSeekTimeoutRef.current);
+              }
+              // Fallback: clear after a short delay even if the progress event is slow.
+              pendingSeekTimeoutRef.current = setTimeout(() => {
+                setPendingSeekTarget(null);
+                pendingSeekTimeoutRef.current = null;
+              }, 1500);
+            }}
+            minimumTrackColor={theme.colors.primary}
+            maximumTrackColor={theme.colors.surfaceVariant}
+            thumbColor={theme.colors.primary}
+          />
           <View style={styles.timeContainer}>
             <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
-              {formatDuration(displayPosition)}
+              {formatDuration(safePosition)}
             </Text>
             <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
-              {formatDuration(duration)}
+              {formatDuration(safeDuration)}
             </Text>
           </View>
         </View>
@@ -264,12 +313,12 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: 24,
-    paddingTop: 16,
-    paddingBottom: 32,
+    paddingTop: 8,
+    paddingBottom: 16,
     alignItems: 'center',
   },
   artworkContainer: {
-    marginBottom: 24,
+    marginBottom: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.3,
@@ -288,7 +337,7 @@ const styles = StyleSheet.create({
   },
   info: {
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 12,
     paddingHorizontal: 16,
   },
   title: {
@@ -301,22 +350,22 @@ const styles = StyleSheet.create({
   },
   seekbarContainer: {
     width: '100%',
-    marginBottom: 24,
+    marginBottom: 12,
   },
-  seekbarSlider: {
-    width: '100%',
-    height: 40,
+  seekingLabel: {
+    alignSelf: 'flex-start',
+    marginBottom: 6,
   },
   timeContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 8,
+    marginTop: 4,
   },
   mainControls: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 24,
+    marginBottom: 12,
     width: '100%',
   },
   playButton: {

@@ -1,6 +1,9 @@
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
-import { BACKEND_URL } from '../constants';
+import { DEFAULT_BACKEND_URL } from '../constants';
+
+// Initialize with default
+let currentBackendUrl = DEFAULT_BACKEND_URL;
 
 export interface YouTubePlaylistInfo {
   id: string;
@@ -44,6 +47,11 @@ interface BackendPlaylistVideosResponse {
 
 export class YouTubeApiService {
   private accessToken: string | null = null;
+  private backendUrl: string = DEFAULT_BACKEND_URL;
+
+  setBackendUrl(url: string) {
+    this.backendUrl = url;
+  }
 
   setAccessToken(token: string) {
     this.accessToken = token;
@@ -60,7 +68,7 @@ export class YouTubeApiService {
     }
 
     const queryParams = new URLSearchParams(params).toString();
-    const response = await axios.get<T>(`${BACKEND_URL}/api${endpoint}?${queryParams}`, {
+    const response = await axios.get<T>(`${this.backendUrl}/api${endpoint}?${queryParams}`, {
       headers,
       timeout: 30000, // 30 second timeout for cold starts
     });
@@ -121,7 +129,7 @@ export class YouTubeApiService {
         throw new Error('Not authenticated. Please sign in with Google.');
       }
 
-      const response = await fetch(`${BACKEND_URL}/api/user-playlists`, {
+      const response = await fetch(`${this.backendUrl || DEFAULT_BACKEND_URL}/api/user-playlists`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',

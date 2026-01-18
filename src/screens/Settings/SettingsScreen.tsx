@@ -9,12 +9,13 @@ import {
   RadioButton,
   Divider,
   useTheme,
+  TextInput,
 } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as FileSystem from 'expo-file-system/legacy';
 import { useAppContext } from '../../store/AppContext';
 import { authService } from '../../services/authService';
-import { AUDIO_QUALITY_OPTIONS, AUTO_SYNC_INTERVAL_OPTIONS } from '../../constants';
+import { AUDIO_QUALITY_OPTIONS, AUTO_SYNC_INTERVAL_OPTIONS, DEFAULT_BACKEND_URL } from '../../constants';
 import { formatFileSize } from '../../utils/formatters';
 import { loadDownloadIndex, clearDownloadIndex } from '../../utils/downloadIndex';
 import { downloadService } from '../../services/downloadService';
@@ -30,12 +31,23 @@ const SettingsScreen: React.FC = () => {
   const [qualityDialogVisible, setQualityDialogVisible] = useState(false);
   const [intervalDialogVisible, setIntervalDialogVisible] = useState(false);
   const [concurrentDialogVisible, setConcurrentDialogVisible] = useState(false);
+  const [backendDialogVisible, setBackendDialogVisible] = useState(false);
+
   const [selectedQuality, setSelectedQuality] = useState(state.settings.audioQuality);
   const [selectedInterval, setSelectedInterval] = useState(state.settings.autoSyncInterval);
   const [selectedConcurrent, setSelectedConcurrent] = useState(
     state.settings.maxConcurrentDownloads
   );
+  // Ensure we have a default if it's missing (migration safety)
+  const currentBackendUrl = state.settings.backendUrl || DEFAULT_BACKEND_URL;
+  const [tempBackendUrl, setTempBackendUrl] = useState(currentBackendUrl);
+
   const [storageUsed, setStorageUsed] = useState<number | null>(null);
+
+  React.useEffect(() => {
+    // Keep temp url in sync if it changes externally or on load
+    setTempBackendUrl(state.settings.backendUrl || DEFAULT_BACKEND_URL);
+  }, [state.settings.backendUrl]);
 
   React.useEffect(() => {
     calculateStorageUsage();
@@ -209,6 +221,42 @@ const SettingsScreen: React.FC = () => {
     setConcurrentDialogVisible(false);
   };
 
+  const validateUrl = (url: string) => {
+    try {
+      // Basic check for http/https
+      return url.startsWith('http://') || url.startsWith('https://');
+    } catch {
+      return false;
+    }
+  };
+
+  const saveBackendUrl = () => {
+    const trimmed = tempBackendUrl.trim();
+
+    if (!trimmed) {
+      Alert.alert('Error', 'URL cannot be empty');
+      return;
+    }
+
+    if (!validateUrl(trimmed)) {
+      Alert.alert('Invalid URL', 'Please enter a valid URL starting with http:// or https://');
+      return;
+    }
+
+    // Remove trailing slash for consistency
+    const cleanUrl = trimmed.endsWith('/') ? trimmed.slice(0, -1) : trimmed;
+
+    dispatch({
+      type: 'SET_SETTINGS',
+      payload: { ...state.settings, backendUrl: cleanUrl },
+    });
+    setBackendDialogVisible(false);
+  };
+
+  const resetBackendUrl = () => {
+    setTempBackendUrl(DEFAULT_BACKEND_URL);
+  };
+
   return (
     <SafeAreaView
       style={[styles.container, { backgroundColor: theme.colors.background }]}
@@ -244,6 +292,22 @@ const SettingsScreen: React.FC = () => {
               />
             </>
           )}
+        </List.Section>
+
+        <Divider />
+
+        <List.Section>
+          <List.Subheader>Backend</List.Subheader>
+          <List.Item
+            title="Backend URL"
+            description={state.settings.backendUrl || DEFAULT_BACKEND_URL}
+            left={(props: any) => <List.Icon {...props} icon="server" />}
+            right={(props: any) => <List.Icon {...props} icon="pencil" />}
+            onPress={() => {
+              setTempBackendUrl(state.settings.backendUrl || DEFAULT_BACKEND_URL);
+              setBackendDialogVisible(true);
+            }}
+          />
         </List.Section>
 
         <Divider />
@@ -341,11 +405,13 @@ const SettingsScreen: React.FC = () => {
             title="Version"
             description="1.0.0"
             left={props => <List.Icon {...props} icon="information" />}
+            onPress={() => Linking.openURL('https://github.com/Sukarth/yt-music-manager/releases')}
           />
           <List.Item
             title="Author"
             description="Sukarth Acharya"
             left={props => <List.Icon {...props} icon="account" />}
+            onPress={() => Linking.openURL('https://github.com/Sukarth')}
           />
           <List.Item
             title="View on GitHub"
@@ -419,6 +485,28 @@ const SettingsScreen: React.FC = () => {
           <Dialog.Actions>
             <Button onPress={() => setConcurrentDialogVisible(false)}>Cancel</Button>
             <Button onPress={saveConcurrent}>Save</Button>
+          </Dialog.Actions>
+        </Dialog>
+
+        <Dialog
+          visible={backendDialogVisible}
+          onDismiss={() => setBackendDialogVisible(false)}>
+          <Dialog.Title>Backend Server URL</Dialog.Title>
+          <Dialog.Content>
+            <TextInput
+              label="Server URL"
+              value={tempBackendUrl}
+              onChangeText={setTempBackendUrl}
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="url"
+              mode="outlined"
+            />
+          </Dialog.Content>
+          <Dialog.Actions>
+            <Button onPress={resetBackendUrl} textColor={theme.colors.error}>Reset Default</Button>
+            <Button onPress={() => setBackendDialogVisible(false)}>Cancel</Button>
+            <Button onPress={saveBackendUrl}>Save</Button>
           </Dialog.Actions>
         </Dialog>
       </Portal>

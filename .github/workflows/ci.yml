@@ -60,12 +60,12 @@ jobs:
 
       - run: npm install -g @expo/cli
 
+      - run: npx expo prebuild --platform android --clean
+
       - name: Restore keystore
         run: |
           mkdir -p android/app
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/release.keystore
-
-      - run: npx expo prebuild --platform android --clean
 
       - name: Configure signing
         run: |
@@ -76,20 +76,6 @@ jobs:
           MYAPP_UPLOAD_KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}
           EOF
 
-      - name: Inject signing config
-        run: |
-          sed -i '/android {/a\
-              signingConfigs {\
-                  release {\
-                      storeFile file("release.keystore")\
-                      storePassword MYAPP_UPLOAD_STORE_PASSWORD\
-                      keyAlias MYAPP_UPLOAD_KEY_ALIAS\
-                      keyPassword MYAPP_UPLOAD_KEY_PASSWORD\
-                  }\
-              }' android/app/build.gradle
-          
-          sed -i '/buildTypes {/,/release {/s/release {/release {\n            signingConfig signingConfigs.release/' android/app/build.gradle
-
       - name: Build release APK
         working-directory: android
         run: ./gradlew assembleRelease --no-daemon
@@ -98,7 +84,17 @@ jobs:
         with:
           name: android-apk-signed
           path: android/app/build/outputs/apk/release/*.apk
-          retention-days: 30
+          retention-days: 90
+
+      - name: Build release Bundle (AAB)
+        working-directory: android
+        run: ./gradlew bundleRelease --no-daemon
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-aab-signed
+          path: android/app/build/outputs/bundle/release/*.aab
+          retention-days: 90
 
   code-quality:
     name: Code Quality
@@ -116,4 +112,4 @@ jobs:
         with:
           name: eslint-report
           path: eslint-report.json
-          retention-days: 7
+          retention-days: 90

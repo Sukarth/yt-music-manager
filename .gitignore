@@ -1,5 +1,3 @@
-# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
-
 # dependencies
 node_modules/
 
@@ -65,9 +63,12 @@ logs/
 # Sensitive files
 android-service-account.json
 google-services.json
+google-services.json.bak
 GoogleService-Info.plist
 keystore_base64.txt
 github_secrets.txt
+*.keystore
+!android/app/debug.keystore
 
 # OS
 Thumbs.db

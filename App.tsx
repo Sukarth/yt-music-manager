@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { Provider as PaperProvider, MD3DarkTheme, MD3LightTheme } from 'react-native-paper';
 import { useColorScheme } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { setAudioModeAsync } from 'expo-audio';
 import * as WebBrowser from 'expo-web-browser';
 import { AppProvider } from './src/store/AppContext';
@@ -28,11 +29,13 @@ export default function App() {
   }, []);
 
   return (
-    <PaperProvider theme={theme}>
-      <AppProvider>
-        <RootNavigator />
-        <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
-      </AppProvider>
-    </PaperProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <PaperProvider theme={theme}>
+        <AppProvider>
+          <RootNavigator />
+          <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
+        </AppProvider>
+      </PaperProvider>
+    </GestureHandlerRootView>
   );
 }

@@ -63,7 +63,7 @@ class PlayerService {
                     Capability.SkipToPrevious,
                     Capability.SeekTo,
                 ],
-                compactCapabilities: [Capability.Play, Capability.Pause, Capability.SkipToNext],
+                compactCapabilities: [Capability.Play, Capability.Pause, Capability.SkipToNext, Capability.SkipToPrevious],
                 progressUpdateEventInterval: 1,
             });
             this.attachEventListeners();
@@ -77,17 +77,17 @@ class PlayerService {
         if (this.listenersAttached) return;
         this.listenersAttached = true;
 
-        TrackPlayer.addEventListener(Event.PlaybackState, (event) => {
+        const playbackStateListener = TrackPlayer.addEventListener(Event.PlaybackState, (event) => {
             const isPlaying = event.state === State.Playing;
             const isLoading = event.state === State.Buffering || event.state === State.Loading;
             this.updateState({ isPlaying, isLoading });
         });
 
-        TrackPlayer.addEventListener(Event.PlaybackProgressUpdated, (event) => {
+        const progressListener = TrackPlayer.addEventListener(Event.PlaybackProgressUpdated, (event) => {
             this.updateState({ position: event.position, duration: event.duration });
         });
 
-        TrackPlayer.addEventListener(Event.PlaybackTrackChanged, async (event) => {
+        const trackChangedListener = TrackPlayer.addEventListener(Event.PlaybackTrackChanged, async (event) => {
             if (event.nextTrack === undefined || event.nextTrack === null) return;
             const index = event.nextTrack;
             const next = this.state.queue[index];
@@ -210,28 +210,57 @@ class PlayerService {
     }
 
     async playNext() {
-        try {
-            await TrackPlayer.skipToNext();
-            const index = (await TrackPlayer.getCurrentTrack()) ?? this.state.currentIndex + 1;
-            const next = this.state.queue[index];
-            if (next) this.updateState({ currentIndex: index, currentTrack: next, position: 0 });
-        } catch (error) {
-            if (this.state.repeatMode === 'all') {
-                await TrackPlayer.skip(0);
-                const first = this.state.queue[0];
-                if (first) this.updateState({ currentIndex: 0, currentTrack: first, position: 0 });
+        const { queue, currentIndex, currentTrack, repeatMode } = this.state;
+        if (queue.length === 0) return;
+
+        let nextIndex = currentIndex + 1;
+        if (nextIndex >= queue.length) {
+            if (repeatMode === 'all') {
+                nextIndex = 0;
+            } else {
+                return; // End of queue
             }
+        }
+
+        const next = queue[nextIndex];
+        if (!next) return;
+
+        // Find track position in TrackPlayer's queue by ID
+        const tpQueue = await TrackPlayer.getQueue();
+        const tpIndex = tpQueue.findIndex((t) => t.id === next.id);
+        if (tpIndex >= 0) {
+            await TrackPlayer.skip(tpIndex);
+            this.updateState({ currentIndex: nextIndex, currentTrack: next, position: 0 });
         }
     }
 
     async playPrevious() {
-        try {
-            await TrackPlayer.skipToPrevious();
-            const index = (await TrackPlayer.getCurrentTrack()) ?? this.state.currentIndex - 1;
-            const prev = this.state.queue[index];
-            if (prev) this.updateState({ currentIndex: index, currentTrack: prev, position: 0 });
-        } catch (error) {
+        const { queue, currentIndex, position } = this.state;
+        if (queue.length === 0) return;
+
+        // If more than 3 seconds in, restart current track
+        if (position > 3) {
             await TrackPlayer.seekTo(0);
+            this.updateState({ position: 0 });
+            return;
+        }
+
+        let prevIndex = currentIndex - 1;
+        if (prevIndex < 0) {
+            prevIndex = 0;
+            await TrackPlayer.seekTo(0);
+            this.updateState({ position: 0 });
+            return;
+        }
+
+        const prev = queue[prevIndex];
+        if (!prev) return;
+
+        const tpQueue = await TrackPlayer.getQueue();
+        const tpIndex = tpQueue.findIndex((t) => t.id === prev.id);
+        if (tpIndex >= 0) {
+            await TrackPlayer.skip(tpIndex);
+            this.updateState({ currentIndex: prevIndex, currentTrack: prev, position: 0 });
         }
     }
 
@@ -255,32 +284,71 @@ class PlayerService {
         this.updateState({ repeatMode: nextMode });
     }
 
-    async toggleShuffle() {
+    toggleShuffle() {
         const newShuffle = !this.state.shuffleEnabled;
-        await this.rebuildQueue(newShuffle);
-        this.updateState({ shuffleEnabled: newShuffle });
-    }
-
-    private async rebuildQueue(shuffle: boolean) {
         const current = this.state.currentTrack;
         const baseQueue = this.state.originalQueue.length ? this.state.originalQueue : this.state.queue;
-        if (!current || baseQueue.length === 0) return;
+
+        if (!current || baseQueue.length === 0) {
+            this.updateState({ shuffleEnabled: newShuffle });
+            return;
+        }
 
         const currentBaseIndex = baseQueue.findIndex((t) => t.id === current.id);
-        const effectiveQueue = shuffle
+        const effectiveQueue = newShuffle
             ? this.shuffleArray([...baseQueue], currentBaseIndex >= 0 ? currentBaseIndex : 0)
-            : baseQueue;
+            : [...baseQueue];
         const newIndex = effectiveQueue.findIndex((t) => t.id === current.id);
-        const position = await TrackPlayer.getPosition();
 
-        await TrackPlayer.reset();
-        await TrackPlayer.add(effectiveQueue.map((t) => this.toTPTrack(t)));
-        await TrackPlayer.setRepeatMode(this.tpRepeat(this.state.repeatMode));
-        await TrackPlayer.skip(newIndex >= 0 ? newIndex : 0);
-        if (position > 0) await TrackPlayer.seekTo(position);
-        if (this.state.isPlaying) await TrackPlayer.play();
+        this.updateState({
+            shuffleEnabled: newShuffle,
+            queue: effectiveQueue,
+            currentIndex: newIndex >= 0 ? newIndex : 0,
+        });
 
-        this.updateState({ queue: effectiveQueue, currentIndex: newIndex >= 0 ? newIndex : 0, currentTrack: current });
+
+        this.syncNativeQueue(effectiveQueue, current).catch(err =>
+            console.error('Failed to sync native queue:', err)
+        );
+    }
+
+    private async syncNativeQueue(newQueue: Track[], currentTrack: Track) {
+        try {
+            const queue = await TrackPlayer.getQueue();
+            const currentNativeIndex = await TrackPlayer.getCurrentTrack();
+            if (currentNativeIndex === null) return;
+
+            const currentNativeTrack = queue[currentNativeIndex];
+            if (currentNativeTrack.id !== currentTrack.id) {
+                return;
+            }
+
+            const len = queue.length;
+            const indicesToRemove = [];
+            for (let i = 0; i < len; i++) {
+                if (i !== currentNativeIndex) {
+                    indicesToRemove.push(i);
+                }
+            }
+
+            if (indicesToRemove.length > 0) {
+                await TrackPlayer.remove(indicesToRemove);
+            }
+
+            const newIndex = newQueue.findIndex(t => t.id === currentTrack.id);
+            const prevItems = newQueue.slice(0, newIndex);
+            const nextItems = newQueue.slice(newIndex + 1);
+
+            if (nextItems.length > 0) {
+                await TrackPlayer.add(nextItems.map(t => this.toTPTrack(t)));
+            }
+
+            if (prevItems.length > 0) {
+                await TrackPlayer.add(prevItems.map(t => this.toTPTrack(t)), 0);
+            }
+        } catch (e) {
+            console.error('Error syncing native queue', e);
+        }
     }
 
     async stop() {

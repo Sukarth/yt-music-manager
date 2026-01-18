@@ -12,6 +12,8 @@ import {
   saveAuth,
 } from '../utils/storage';
 import * as FileSystem from 'expo-file-system/legacy';
+import { youtubeApi } from '../services/youtubeApi';
+import { downloadService } from '../services/downloadService';
 
 const getDocumentDirectory = (): string => {
   return FileSystem.documentDirectory || 'file:///';
@@ -128,9 +130,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (settings) {
         const downloadPath = settings.downloadPath || `${getDocumentDirectory()}YTMusicManager/`;
         const storageLocationType = (settings as any).storageLocationType || 'internal';
+        // Migration: Ensure backendUrl exists
+        const backendUrl = (settings as any).backendUrl || DEFAULT_SETTINGS.backendUrl;
+
         dispatch({
           type: 'SET_SETTINGS',
-          payload: { ...settings, downloadPath, storageLocationType },
+          payload: { ...settings, downloadPath, storageLocationType, backendUrl },
         });
       } else {
         const downloadPath = `${getDocumentDirectory()}YTMusicManager/`;
@@ -155,6 +160,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     saveSettings(state.settings);
+    // Sync backend URL to services whenever settings change
+    if (state.settings.backendUrl) {
+      youtubeApi.setBackendUrl(state.settings.backendUrl);
+      downloadService.setBackendUrl(state.settings.backendUrl);
+    }
   }, [state.settings]);
 
   useEffect(() => {
