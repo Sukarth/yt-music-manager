@@ -73,7 +73,6 @@ See [google-services.json.example](./google-services.json.example) for structure
 - Context API for state management
 - AsyncStorage and SecureStore for data persistence
 
-
 ## License
 
 MIT License. see [LICENSE](./LICENSE) file for more details.

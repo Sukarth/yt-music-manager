@@ -1,6 +1,13 @@
 import React from 'react';
 import { View, StyleSheet, Image } from 'react-native';
-import { Text, ProgressBar, IconButton, useTheme, TouchableRipple, Surface } from 'react-native-paper';
+import {
+  Text,
+  ProgressBar,
+  IconButton,
+  useTheme,
+  TouchableRipple,
+  Surface,
+} from 'react-native-paper';
 import { Track } from '../../types';
 import { formatDuration, formatFileSize } from '../../utils/formatters';
 
@@ -54,7 +61,12 @@ const TrackItem: React.FC<TrackItemProps> = ({ track, onPress, onDownload, onCan
             {track.thumbnailUrl ? (
               <Image source={{ uri: track.thumbnailUrl }} style={styles.thumbnail} />
             ) : (
-              <View style={[styles.thumbnail, styles.placeholder, { backgroundColor: theme.colors.surfaceVariant }]}>
+              <View
+                style={[
+                  styles.thumbnail,
+                  styles.placeholder,
+                  { backgroundColor: theme.colors.surfaceVariant },
+                ]}>
                 <Text variant="headlineSmall">🎵</Text>
               </View>
             )}
@@ -67,10 +79,15 @@ const TrackItem: React.FC<TrackItemProps> = ({ track, onPress, onDownload, onCan
             </Text>
 
             <View style={styles.detailsRow}>
-              <Text variant="bodyMedium" numberOfLines={1} style={[styles.artist, { color: theme.colors.onSurfaceVariant }]}>
+              <Text
+                variant="bodyMedium"
+                numberOfLines={1}
+                style={[styles.artist, { color: theme.colors.onSurfaceVariant }]}>
                 {track.artist}
               </Text>
-              <Text variant="bodySmall" style={[styles.duration, { color: theme.colors.onSurfaceDisabled }]}>
+              <Text
+                variant="bodySmall"
+                style={[styles.duration, { color: theme.colors.onSurfaceDisabled }]}>
                 • {formatDuration(track.duration || 0)}
               </Text>
             </View>
@@ -94,7 +111,11 @@ const TrackItem: React.FC<TrackItemProps> = ({ track, onPress, onDownload, onCan
                     </>
                   ) : (
                     <>
-                      <ProgressBar indeterminate color={theme.colors.primary} style={styles.progressBar} />
+                      <ProgressBar
+                        indeterminate
+                        color={theme.colors.primary}
+                        style={styles.progressBar}
+                      />
                       <Text
                         variant="labelSmall"
                         style={{ color: theme.colors.primary, marginLeft: 8 }}>

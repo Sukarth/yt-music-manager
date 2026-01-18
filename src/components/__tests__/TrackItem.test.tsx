@@ -48,7 +48,7 @@ describe('TrackItem', () => {
   it('should show file size when completed', () => {
     const { getByText } = renderWithProvider(<TrackItem track={mockTrack} />);
 
-    expect(getByText('5 MB')).toBeTruthy();
+    expect(getByText(/Downloaded.*5 MB/)).toBeTruthy();
   });
 
   it('should call onPress when pressed', () => {

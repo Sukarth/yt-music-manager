@@ -1,11 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import {
-  View,
-  StyleSheet,
-  Image,
-  Dimensions,
-  TouchableOpacity,
-} from 'react-native';
+import { View, StyleSheet, Image, Dimensions, TouchableOpacity } from 'react-native';
 import { Text, IconButton, useTheme, Surface } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { RouteProp } from '@react-navigation/native';
@@ -18,7 +12,7 @@ import { RootStackParamList } from '../../types';
 import { formatDuration } from '../../utils/formatters';
 import QueueModal from '../../components/player/QueueModal';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const _screenWidth = Dimensions.get('window').width;
 
 type PlayerScreenRouteProp = RouteProp<RootStackParamList, 'Player'>;
 type PlayerScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Player'>;
@@ -106,9 +100,7 @@ const PlayerScreen: React.FC<PlayerScreenProps> = ({ route, navigation }) => {
     };
   }, []);
 
-  const displayedPosition = isSeeking
-    ? previewPosition
-    : (pendingSeekTarget ?? safePosition);
+  const displayedPosition = isSeeking ? previewPosition : (pendingSeekTarget ?? safePosition);
 
   const handleSeek = async (value: number) => {
     // if (__DEV__) console.log('[PlayerScreen] Seeking to:', value);
@@ -147,7 +139,7 @@ const PlayerScreen: React.FC<PlayerScreenProps> = ({ route, navigation }) => {
       <View style={styles.content}>
         {/* Artwork */}
         <View style={styles.artworkContainer}>
-          {(currentTrack?.thumbnailUrl || track.thumbnailUrl) ? (
+          {currentTrack?.thumbnailUrl || track.thumbnailUrl ? (
             <Image
               source={{ uri: currentTrack?.thumbnailUrl || track.thumbnailUrl }}
               style={styles.artwork}
@@ -158,8 +150,7 @@ const PlayerScreen: React.FC<PlayerScreenProps> = ({ route, navigation }) => {
                 styles.artwork,
                 styles.placeholderArtwork,
                 { backgroundColor: theme.colors.surfaceVariant },
-              ]}
-            >
+              ]}>
               <IconButton icon="music-note" size={80} />
             </View>
           )}
@@ -173,7 +164,9 @@ const PlayerScreen: React.FC<PlayerScreenProps> = ({ route, navigation }) => {
             speed={50}
             delay={1000}
           />
-          <Text variant="titleMedium" style={[styles.artist, { color: theme.colors.onSurfaceVariant }]}>
+          <Text
+            variant="titleMedium"
+            style={[styles.artist, { color: theme.colors.onSurfaceVariant }]}>
             {currentTrack?.artist || track.artist}
           </Text>
         </View>
@@ -183,8 +176,7 @@ const PlayerScreen: React.FC<PlayerScreenProps> = ({ route, navigation }) => {
           {isSeeking && (
             <Text
               variant="bodySmall"
-              style={[styles.seekingLabel, { color: theme.colors.onSurfaceVariant }]}
-            >
+              style={[styles.seekingLabel, { color: theme.colors.onSurfaceVariant }]}>
               Seeking to {formatDuration(previewPosition)}
             </Text>
           )}
@@ -192,14 +184,14 @@ const PlayerScreen: React.FC<PlayerScreenProps> = ({ route, navigation }) => {
             value={displayedPosition}
             maximumValue={safeDuration}
             onSeek={handleSeek}
-            onSeekStart={(value) => {
+            onSeekStart={value => {
               setIsSeeking(true);
               setPreviewPosition(value);
             }}
-            onSeekPreview={(value) => {
+            onSeekPreview={value => {
               setPreviewPosition(value);
             }}
-            onSeekEnd={(value) => {
+            onSeekEnd={value => {
               setIsSeeking(false);
               setPreviewPosition(value);
               setPendingSeekTarget(value);
@@ -242,7 +234,9 @@ const PlayerScreen: React.FC<PlayerScreenProps> = ({ route, navigation }) => {
             disabled={!canPlayPrevious}
             iconColor={theme.colors.onSurface}
           />
-          <Surface style={[styles.playButton, { backgroundColor: theme.colors.primary }]} elevation={4}>
+          <Surface
+            style={[styles.playButton, { backgroundColor: theme.colors.primary }]}
+            elevation={4}>
             <IconButton
               icon={isPlaying ? 'pause' : 'play'}
               size={40}
@@ -268,15 +262,8 @@ const PlayerScreen: React.FC<PlayerScreenProps> = ({ route, navigation }) => {
 
         {/* Secondary Controls */}
         <View style={styles.secondaryControls}>
-          <TouchableOpacity
-            style={styles.queueButton}
-            onPress={() => setQueueVisible(true)}
-          >
-            <IconButton
-              icon="playlist-music"
-              size={24}
-              iconColor={theme.colors.onSurfaceVariant}
-            />
+          <TouchableOpacity style={styles.queueButton} onPress={() => setQueueVisible(true)}>
+            <IconButton icon="playlist-music" size={24} iconColor={theme.colors.onSurfaceVariant} />
             <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
               Queue
             </Text>

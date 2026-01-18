@@ -10,7 +10,10 @@ export const useDownloadManager = () => {
   const { checkAndSetupStorage } = useStoragePermission();
   const [activeDownloads, setActiveDownloads] = useState<Set<string>>(new Set());
 
-  const downloadTrack = async (track: Track, options: { skipStorageCheck?: boolean } = {}): Promise<void> => {
+  const downloadTrack = async (
+    track: Track,
+    options: { skipStorageCheck?: boolean } = {}
+  ): Promise<void> => {
     if (!options.skipStorageCheck) {
       const ok = await checkAndSetupStorage();
       if (!ok) {
@@ -68,7 +71,7 @@ export const useDownloadManager = () => {
       } else {
         try {
           const fileInfo = await FileSystem.getInfoAsync(filePath);
-          actualFileSize = fileInfo.exists && !fileInfo.isDirectory ? (fileInfo.size || 0) : 0;
+          actualFileSize = fileInfo.exists && !fileInfo.isDirectory ? fileInfo.size || 0 : 0;
         } catch (err) {
           console.error('Error getting file size:', err);
         }
@@ -113,7 +116,9 @@ export const useDownloadManager = () => {
     }
   };
 
-  const downloadPlaylist = async (playlistId: string): Promise<{ success: number; failed: number }> => {
+  const downloadPlaylist = async (
+    playlistId: string
+  ): Promise<{ success: number; failed: number }> => {
     // Ensure storage is set up before starting the batch
     const ok = await checkAndSetupStorage();
     if (!ok) {
@@ -250,7 +255,6 @@ export const useDownloadManager = () => {
       // 5. Trigger download for all pending tracks (including new ones)
       // We return the result of downloadPlaylist so the UI can show the report
       return await downloadPlaylist(playlistId);
-
     } catch (error) {
       console.error('Sync failed:', error);
       throw error;

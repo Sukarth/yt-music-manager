@@ -174,7 +174,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [state.auth]);
 
   return <AppContext.Provider value={{ state, dispatch }}>{children}</AppContext.Provider>;
-};
+}
 
 export const useAppContext = () => {
   const context = useContext(AppContext);

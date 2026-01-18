@@ -15,10 +15,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import * as FileSystem from 'expo-file-system/legacy';
 import { useAppContext } from '../../store/AppContext';
 import { authService } from '../../services/authService';
-import { AUDIO_QUALITY_OPTIONS, AUTO_SYNC_INTERVAL_OPTIONS, DEFAULT_BACKEND_URL } from '../../constants';
+import {
+  AUDIO_QUALITY_OPTIONS,
+  AUTO_SYNC_INTERVAL_OPTIONS,
+  DEFAULT_BACKEND_URL,
+} from '../../constants';
 import { formatFileSize } from '../../utils/formatters';
 import { loadDownloadIndex, clearDownloadIndex } from '../../utils/downloadIndex';
-import { downloadService } from '../../services/downloadService';
 
 const getDocumentDirectory = (): string => {
   return FileSystem.documentDirectory || 'file:///';
@@ -55,12 +58,16 @@ const SettingsScreen: React.FC = () => {
 
   const pickDownloadFolder = async () => {
     if (Platform.OS !== 'android') {
-      Alert.alert('Not Supported', 'Changing download folder is only supported on Android. On iOS, files are always in the Documents folder.');
+      Alert.alert(
+        'Not Supported',
+        'Changing download folder is only supported on Android. On iOS, files are always in the Documents folder.'
+      );
       return;
     }
 
     try {
-      const permissions = await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync();
+      const permissions =
+        await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync();
       if (permissions.granted) {
         const uri = permissions.directoryUri;
         dispatch({
@@ -68,10 +75,13 @@ const SettingsScreen: React.FC = () => {
           payload: {
             ...state.settings,
             storageLocationType: 'custom',
-            downloadPath: uri
-          }
+            downloadPath: uri,
+          },
         });
-        Alert.alert('Success', 'Download location updated! New downloads will be saved to the selected folder.');
+        Alert.alert(
+          'Success',
+          'Download location updated! New downloads will be saved to the selected folder.'
+        );
       } else {
         // User cancelled
       }
@@ -90,7 +100,7 @@ const SettingsScreen: React.FC = () => {
       // Best-effort fallback: if some downloads aren't indexed yet, include sizes from current state.
       // (Avoid double-counting by only adding tracks whose filePath isn't already in the index.)
       let totalSize = 0;
-      for (const [uri, entry] of Object.entries(index)) {
+      for (const [_uri, entry] of Object.entries(index)) {
         totalSize += entry?.size || 0;
       }
 
@@ -134,67 +144,82 @@ const SettingsScreen: React.FC = () => {
   };
 
   const handleDeleteDownloadedFiles = async () => {
-    Alert.alert('Delete All Storage', 'This will delete the entire YT Music Manager folder and all downloaded music. Are you sure?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete Everything',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            const settingsStr = await import('@react-native-async-storage/async-storage').then(m => m.default.getItem('@yt_music_manager_settings'));
-            const settings = settingsStr ? JSON.parse(settingsStr) : null;
-            const isCustom = settings?.storageLocationType === 'custom' && settings?.downloadPath;
+    Alert.alert(
+      'Delete All Storage',
+      'This will delete the entire YT Music Manager folder and all downloaded music. Are you sure?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete Everything',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const settingsStr = await import('@react-native-async-storage/async-storage').then(
+                m => m.default.getItem('@yt_music_manager_settings')
+              );
+              const settings = settingsStr ? JSON.parse(settingsStr) : null;
+              const isCustom = settings?.storageLocationType === 'custom' && settings?.downloadPath;
 
-            if (isCustom && Platform.OS === 'android') {
-              // Delete entire YT Music Manager folder from SAF location
-              const rootUri = settings.downloadPath;
-              try {
-                const children = await FileSystem.StorageAccessFramework.readDirectoryAsync(rootUri);
-                for (const childUri of children) {
-                  const childName = decodeURIComponent(childUri.split('/').pop() || '');
-                  if (childName === 'YT Music Manager') {
-                    await FileSystem.StorageAccessFramework.deleteAsync(childUri, { idempotent: true });
-                    break;
+              if (isCustom && Platform.OS === 'android') {
+                // Delete entire YT Music Manager folder from SAF location
+                const rootUri = settings.downloadPath;
+                try {
+                  const children =
+                    await FileSystem.StorageAccessFramework.readDirectoryAsync(rootUri);
+                  for (const childUri of children) {
+                    const childName = decodeURIComponent(childUri.split('/').pop() || '');
+                    if (childName === 'YT Music Manager') {
+                      await FileSystem.StorageAccessFramework.deleteAsync(childUri, {
+                        idempotent: true,
+                      });
+                      break;
+                    }
                   }
+                } catch (safErr) {
+                  console.error('SAF delete error:', safErr);
                 }
-              } catch (safErr) {
-                console.error('SAF delete error:', safErr);
-              }
-            } else {
-              // Delete entire internal YTMusicManager folder
-              const basePath = `${getDocumentDirectory()}YTMusicManager/`;
-              try {
-                const dirInfo = await FileSystem.getInfoAsync(basePath);
-                if (dirInfo.exists) {
-                  await FileSystem.deleteAsync(basePath, { idempotent: true });
+              } else {
+                // Delete entire internal YTMusicManager folder
+                const basePath = `${getDocumentDirectory()}YTMusicManager/`;
+                try {
+                  const dirInfo = await FileSystem.getInfoAsync(basePath);
+                  if (dirInfo.exists) {
+                    await FileSystem.deleteAsync(basePath, { idempotent: true });
+                  }
+                } catch (internalErr) {
+                  console.error('Internal delete error:', internalErr);
                 }
-              } catch (internalErr) {
-                console.error('Internal delete error:', internalErr);
               }
+
+              // Clear download index
+              await clearDownloadIndex();
+
+              // Clear all track file paths from state
+              state.tracks.forEach(track => {
+                if (track.filePath) {
+                  dispatch({
+                    type: 'UPDATE_TRACK',
+                    payload: {
+                      ...track,
+                      filePath: '',
+                      downloadStatus: 'pending',
+                      downloadProgress: 0,
+                      fileSize: 0,
+                    },
+                  });
+                }
+              });
+
+              setStorageUsed(0);
+              Alert.alert('Success', 'All storage deleted successfully!');
+            } catch (e) {
+              console.error('Delete error:', e);
+              Alert.alert('Error', 'Failed to delete storage.');
             }
-
-            // Clear download index
-            await clearDownloadIndex();
-
-            // Clear all track file paths from state
-            state.tracks.forEach(track => {
-              if (track.filePath) {
-                dispatch({
-                  type: 'UPDATE_TRACK',
-                  payload: { ...track, filePath: '', downloadStatus: 'pending', downloadProgress: 0, fileSize: 0 }
-                });
-              }
-            });
-
-            setStorageUsed(0);
-            Alert.alert('Success', 'All storage deleted successfully!');
-          } catch (e) {
-            console.error('Delete error:', e);
-            Alert.alert('Error', 'Failed to delete storage.');
-          }
+          },
         },
-      },
-    ]);
+      ]
+    );
   };
 
   const saveQuality = () => {
@@ -260,8 +285,7 @@ const SettingsScreen: React.FC = () => {
   return (
     <SafeAreaView
       style={[styles.container, { backgroundColor: theme.colors.background }]}
-      edges={['top', 'left', 'right']}
-    >
+      edges={['top', 'left', 'right']}>
       <ScrollView>
         <List.Section>
           <List.Subheader>Authentication</List.Subheader>
@@ -488,9 +512,7 @@ const SettingsScreen: React.FC = () => {
           </Dialog.Actions>
         </Dialog>
 
-        <Dialog
-          visible={backendDialogVisible}
-          onDismiss={() => setBackendDialogVisible(false)}>
+        <Dialog visible={backendDialogVisible} onDismiss={() => setBackendDialogVisible(false)}>
           <Dialog.Title>Backend Server URL</Dialog.Title>
           <Dialog.Content>
             <TextInput
@@ -504,7 +526,9 @@ const SettingsScreen: React.FC = () => {
             />
           </Dialog.Content>
           <Dialog.Actions>
-            <Button onPress={resetBackendUrl} textColor={theme.colors.error}>Reset Default</Button>
+            <Button onPress={resetBackendUrl} textColor={theme.colors.error}>
+              Reset Default
+            </Button>
             <Button onPress={() => setBackendDialogVisible(false)}>Cancel</Button>
             <Button onPress={saveBackendUrl}>Save</Button>
           </Dialog.Actions>

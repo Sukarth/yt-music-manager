@@ -105,23 +105,26 @@ export class DownloadService {
 
         // Integrity check on the cache file (file://), since getInfoAsync isn't supported for SAF content:// URIs.
         const cacheInfo = await FileSystem.getInfoAsync(result.uri);
-        const cacheSize = cacheInfo.exists && !cacheInfo.isDirectory ? (cacheInfo.size || 0) : 0;
+        const cacheSize = cacheInfo.exists && !cacheInfo.isDirectory ? cacheInfo.size || 0 : 0;
         if (cacheSize < 5 * 1024) {
           await FileSystem.deleteAsync(result.uri, { idempotent: true });
           throw new Error('Downloaded file is too small (possible error page)');
         }
 
         // 2. Read file as Base64 (needed for SAF write)
-        const fileContent = await FileSystem.readAsStringAsync(result.uri, { encoding: FileSystem.EncodingType.Base64 });
+        const fileContent = await FileSystem.readAsStringAsync(result.uri, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
 
         // 3. Create SAF folder structure: [User Selected Folder]/YT Music Manager/[PlaylistID_PlaylistName]/
         const rootUri: string = settings.downloadPath;
 
         // If the saved URI already points at "YT Music Manager", avoid nesting.
         const rootName = this.getSafDisplayNameFromUri(rootUri);
-        const appFolderUri = rootName === 'YT Music Manager'
-          ? rootUri
-          : await this.getOrCreateSAFFolder(rootUri, 'YT Music Manager');
+        const appFolderUri =
+          rootName === 'YT Music Manager'
+            ? rootUri
+            : await this.getOrCreateSAFFolder(rootUri, 'YT Music Manager');
 
         // Create unique playlist folder (using playlist ID to ensure uniqueness)
         const playlistFolderName = sanitizeFileName(`${playlist.id}_${playlist.name}`);
@@ -135,7 +138,9 @@ export class DownloadService {
           mimeType
         );
 
-        await FileSystem.writeAsStringAsync(createdFileUri, fileContent, { encoding: FileSystem.EncodingType.Base64 });
+        await FileSystem.writeAsStringAsync(createdFileUri, fileContent, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
 
         // 5. Cleanup cache
         await FileSystem.deleteAsync(result.uri, { idempotent: true });
@@ -144,13 +149,11 @@ export class DownloadService {
         await addToDownloadIndex(createdFileUri, cacheSize);
 
         return createdFileUri;
-
       } catch (error) {
         this.activeDownloads.delete(track.id);
         this.downloadCallbacks.delete(track.id);
         throw error;
       }
-
     }
 
     // DEFAULT INTERNAL LOGIC (though now mandatory to use SAF)
@@ -179,16 +182,10 @@ export class DownloadService {
         // NOTE: When the server doesn't send a Content-Length header, Expo reports
         // totalBytesExpectedToWrite as 0 or -1. In that case, percentage progress is unknown.
         const progressRaw = totalBytes > 0 ? downloadedBytes / totalBytes : 0;
-        const progress = Number.isFinite(progressRaw)
-          ? Math.min(1, Math.max(0, progressRaw))
-          : 0;
+        const progress = Number.isFinite(progressRaw) ? Math.min(1, Math.max(0, progressRaw)) : 0;
         const callback = this.downloadCallbacks.get(track.id);
         if (callback) {
-          callback(
-            progress,
-            downloadedBytes,
-            totalBytes
-          );
+          callback(progress, downloadedBytes, totalBytes);
         }
       }
     );
@@ -208,14 +205,14 @@ export class DownloadService {
       // 4. CHECK HTTP STATUS
       if (result.status && result.status !== 200) {
         // Delete the file because it likely contains an HTML error page
-        await FileSystem.deleteAsync(filePath).catch(() => { });
+        await FileSystem.deleteAsync(filePath).catch(() => {});
         throw new Error(`Download failed with status ${result.status}`);
       }
 
       // Track storage usage for internal storage too.
       try {
         const info = await FileSystem.getInfoAsync(result.uri);
-        const size = info.exists && !info.isDirectory ? (info.size || 0) : 0;
+        const size = info.exists && !info.isDirectory ? info.size || 0 : 0;
         await addToDownloadIndex(result.uri, size);
       } catch {
         // Best-effort
@@ -252,13 +249,17 @@ export class DownloadService {
     }
   }
 
-
   async deleteTrackFile(filePath: string): Promise<void> {
     try {
       // getInfoAsync is not supported for SAF content:// URIs on Android.
       // deleteAsync is best-effort and idempotent.
-      if (filePath.startsWith('content://') && (FileSystem as any).StorageAccessFramework?.deleteAsync) {
-        await (FileSystem as any).StorageAccessFramework.deleteAsync(filePath, { idempotent: true });
+      if (
+        filePath.startsWith('content://') &&
+        (FileSystem as any).StorageAccessFramework?.deleteAsync
+      ) {
+        await (FileSystem as any).StorageAccessFramework.deleteAsync(filePath, {
+          idempotent: true,
+        });
       } else {
         await FileSystem.deleteAsync(filePath, { idempotent: true });
       }
@@ -287,9 +288,10 @@ export class DownloadService {
         // SAF: Delete playlist folder
         const rootUri: string = settings.downloadPath;
         const rootName = this.getSafDisplayNameFromUri(rootUri);
-        const appFolderUri = rootName === 'YT Music Manager'
-          ? rootUri
-          : await this.getOrCreateSAFFolder(rootUri, 'YT Music Manager').catch(() => rootUri);
+        const appFolderUri =
+          rootName === 'YT Music Manager'
+            ? rootUri
+            : await this.getOrCreateSAFFolder(rootUri, 'YT Music Manager').catch(() => rootUri);
 
         // Find and delete playlist folder
         try {
@@ -364,14 +366,16 @@ export class DownloadService {
     if (isCustom) {
       const rootUri: string = settings.downloadPath;
       const rootName = this.getSafDisplayNameFromUri(rootUri);
-      const appFolderUri = rootName === 'YT Music Manager'
-        ? rootUri
-        : await this.getOrCreateSAFFolder(rootUri, 'YT Music Manager');
+      const appFolderUri =
+        rootName === 'YT Music Manager'
+          ? rootUri
+          : await this.getOrCreateSAFFolder(rootUri, 'YT Music Manager');
       const playlistFolderUri = await this.getOrCreateSAFFolder(appFolderUri, playlistFolderName);
 
       // Check if M3U already exists to prevent duplication
       const m3uName = `${sanitizeFileName(playlist.name)}.m3u`;
-      const children = await FileSystem.StorageAccessFramework.readDirectoryAsync(playlistFolderUri);
+      const children =
+        await FileSystem.StorageAccessFramework.readDirectoryAsync(playlistFolderUri);
       let existingM3uUri: string | null = null;
 
       for (const childUri of children) {

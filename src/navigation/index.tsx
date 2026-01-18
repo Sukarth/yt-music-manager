@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
-import { NavigationContainer, DefaultTheme, DarkTheme, useNavigationState } from '@react-navigation/native';
+import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
@@ -62,7 +62,11 @@ const MainTabs = () => {
           headerShown: false,
         })}>
         <Tab.Screen name="Home" component={HomeScreen} options={{ title: 'My Playlists' }} />
-        <Tab.Screen name="MyPlaylists" component={MyPlaylistsScreen} options={{ title: 'Cloud Playlists' }} />
+        <Tab.Screen
+          name="MyPlaylists"
+          component={MyPlaylistsScreen}
+          options={{ title: 'Cloud Playlists' }}
+        />
         <Tab.Screen name="Settings" component={SettingsScreen} />
       </Tab.Navigator>
     </View>
@@ -91,7 +95,7 @@ const NavigatorWithMiniPlayer: React.FC = () => {
           },
         }}
         screenListeners={{
-          state: (e) => {
+          state: e => {
             const getCurrentRouteName = (state: any): string | undefined => {
               if (!state) return undefined;
               const route = state.routes[state.index];

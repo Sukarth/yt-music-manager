@@ -152,40 +152,36 @@ const PlaylistDetailScreen: React.FC<PlaylistDetailScreenProps> = ({ navigation,
 
   const handleRemovePlaylist = async () => {
     setOptionsMenuVisible(false);
-    Alert.alert(
-      'Remove Playlist',
-      'Are you sure you want to remove this playlist?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Remove',
-          style: 'destructive',
-          onPress: () => {
-            Alert.alert(
-              'Delete Files?',
-              'Do you also want to delete the downloaded files for this playlist?',
-              [
-                {
-                  text: 'Keep Files',
-                  onPress: async () => {
-                    await removePlaylist(playlistId, false);
-                    navigation.goBack();
-                  }
+    Alert.alert('Remove Playlist', 'Are you sure you want to remove this playlist?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Remove',
+        style: 'destructive',
+        onPress: () => {
+          Alert.alert(
+            'Delete Files?',
+            'Do you also want to delete the downloaded files for this playlist?',
+            [
+              {
+                text: 'Keep Files',
+                onPress: async () => {
+                  await removePlaylist(playlistId, false);
+                  navigation.goBack();
                 },
-                {
-                  text: 'Delete Files',
-                  style: 'destructive',
-                  onPress: async () => {
-                    await removePlaylist(playlistId, true);
-                    navigation.goBack();
-                  }
-                }
-              ]
-            );
-          }
-        }
-      ]
-    );
+              },
+              {
+                text: 'Delete Files',
+                style: 'destructive',
+                onPress: async () => {
+                  await removePlaylist(playlistId, true);
+                  navigation.goBack();
+                },
+              },
+            ]
+          );
+        },
+      },
+    ]);
   };
 
   if (!playlist) {
@@ -196,12 +192,18 @@ const PlaylistDetailScreen: React.FC<PlaylistDetailScreenProps> = ({ navigation,
     );
   }
 
-  const isPlaylistDownloading = playlist?.syncStatus === 'downloading' || playlist?.syncStatus === 'syncing' || isDownloading;
+  const isPlaylistDownloading =
+    playlist?.syncStatus === 'downloading' || playlist?.syncStatus === 'syncing' || isDownloading;
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <View style={styles.header}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <View
+          style={{
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'flex-start',
+          }}>
           <Text variant="headlineSmall" numberOfLines={2} style={{ flex: 1, marginRight: 8 }}>
             {playlist.name}
           </Text>
@@ -264,7 +266,9 @@ const PlaylistDetailScreen: React.FC<PlaylistDetailScreenProps> = ({ navigation,
           <View style={styles.downloadingContainer}>
             <ProgressBar indeterminate color={theme.colors.primary} style={styles.progressBar} />
             <Text variant="bodySmall" style={styles.downloadingText}>
-              {isSyncing ? 'Syncing playlist...' : 'Downloading playlist. This will take some time.'}
+              {isSyncing
+                ? 'Syncing playlist...'
+                : 'Downloading playlist. This will take some time.'}
             </Text>
           </View>
         )}
@@ -281,24 +285,21 @@ const PlaylistDetailScreen: React.FC<PlaylistDetailScreenProps> = ({ navigation,
             selected={selectedFilter === 'all'}
             onPress={() => setSelectedFilter('all')}
             style={styles.filterChip}
-            showSelectedOverlay
-          >
+            showSelectedOverlay>
             All
           </Chip>
           <Chip
             selected={selectedFilter === 'downloaded'}
             onPress={() => setSelectedFilter('downloaded')}
             style={styles.filterChip}
-            showSelectedOverlay
-          >
+            showSelectedOverlay>
             Downloaded
           </Chip>
           <Chip
             selected={selectedFilter === 'pending'}
             onPress={() => setSelectedFilter('pending')}
             style={styles.filterChip}
-            showSelectedOverlay
-          >
+            showSelectedOverlay>
             Pending
           </Chip>
         </View>

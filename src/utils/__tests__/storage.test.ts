@@ -185,6 +185,7 @@ describe('storage utilities', () => {
         storageCleanupEnabled: false,
         theme: 'auto',
         storageLocationType: 'internal',
+        backendUrl: 'http://localhost:3000',
       };
 
       (mockedAsyncStorage.getItem as jest.Mock).mockResolvedValue(JSON.stringify(mockSettings));
@@ -222,6 +223,7 @@ describe('storage utilities', () => {
         storageCleanupEnabled: false,
         theme: 'auto',
         storageLocationType: 'internal',
+        backendUrl: 'http://localhost:3000',
       };
 
       await saveSettings(mockSettings);
@@ -244,6 +246,7 @@ describe('storage utilities', () => {
         storageCleanupEnabled: false,
         theme: 'auto',
         storageLocationType: 'internal',
+        backendUrl: 'http://localhost:3000',
       };
 
       await expect(saveSettings(mockSettings)).rejects.toThrow('Save error');

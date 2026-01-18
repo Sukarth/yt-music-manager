@@ -2,9 +2,6 @@ import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 import { DEFAULT_BACKEND_URL } from '../constants';
 
-// Initialize with default
-let currentBackendUrl = DEFAULT_BACKEND_URL;
-
 export interface YouTubePlaylistInfo {
   id: string;
   title: string;
@@ -133,7 +130,7 @@ export class YouTubeApiService {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`,
+          Authorization: `Bearer ${accessToken}`,
         },
       });
 

@@ -106,6 +106,7 @@ Before building, you **must** configure the app to point to your services.
 
 **A. Backend Service**
 Open `src/constants/index.ts` and set your backend URL (if not using default):
+
 ```typescript
 // Findings: src/constants/index.ts
 export const BACKEND_URL = 'https://your-backend-url.com';
@@ -113,6 +114,7 @@ export const BACKEND_URL = 'https://your-backend-url.com';
 
 **B. Google OAuth (Optional but Recommended)**
 To enable private playlist access:
+
 1. Create a project in [Google Cloud Console](https://console.cloud.google.com).
 2. Create **OAuth 2.0 Credentials**:
    - **Web Application**: Copy this "Client ID".
@@ -138,7 +140,8 @@ keytool -genkeypair -v -storetype PKCS12 \
   -keysize 2048 \
   -validity 10000
 ```
-Follow the prompts. *Save the keystore file and passwords securely. You cannot update your app without them.*
+
+Follow the prompts. _Save the keystore file and passwords securely. You cannot update your app without them._
 
 #### 4. Prepare Native Project
 
@@ -330,6 +333,7 @@ npm run typecheck
 Format: `type(scope): subject`
 
 Types:
+
 - `feat`: New feature
 - `fix`: Bug fix
 - `docs`: Documentation
@@ -339,6 +343,7 @@ Types:
 - `chore`: Maintenance
 
 Examples:
+
 ```
 feat(playlist): add search functionality
 fix(download): resolve race condition in concurrent downloads
@@ -374,10 +379,10 @@ describe('ComponentName', () => {
   it('should render correctly', () => {
     // Arrange
     const props = { ... };
-    
+
     // Act
     const { getByText } = render(<Component {...props} />);
-    
+
     // Assert
     expect(getByText('Expected Text')).toBeTruthy();
   });
@@ -558,18 +563,22 @@ Optimize FlatList:
 
 ```markdown
 ## Description
+
 Brief description of changes
 
 ## Type of Change
+
 - [ ] Bug fix
 - [ ] New feature
 - [ ] Breaking change
 - [ ] Documentation update
 
 ## Testing
+
 Describe testing performed
 
 ## Checklist
+
 - [ ] Tests pass
 - [ ] Code follows style guidelines
 - [ ] Documentation updated

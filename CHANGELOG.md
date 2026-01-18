@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.0] - 2026-01-18
 
 ### Added
+
 - Playlist management (add, sync, delete YouTube Music playlists)
 - Offline downloads with configurable audio quality (128-320 kbps)
 - Custom storage location support via Storage Access Framework (Android)
@@ -21,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - GitHub Actions CI/CD for automated APK and AAB builds
 
 ### Technical
+
 - React Native 0.81.5 with Expo SDK 54
 - React Native Track Player for audio playback
 - React Navigation v7

@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, StyleSheet, Image } from 'react-native';
-import { Card, Text, ProgressBar, IconButton, useTheme } from 'react-native-paper';
-import { Playlist, Track } from '../../types';
+import { Card, Text, ProgressBar, useTheme } from 'react-native-paper';
+import { Playlist } from '../../types';
 import { formatFileSize, formatDate } from '../../utils/formatters';
 
 interface PlaylistCardProps {
@@ -18,8 +18,8 @@ const PlaylistCard: React.FC<PlaylistCardProps> = ({
   downloadedCount = 0,
   downloadedSize,
   onPress,
-  onSync,
-  onDelete
+  onSync: _onSync,
+  onDelete: _onDelete,
 }) => {
   const theme = useTheme();
 

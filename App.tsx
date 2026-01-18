@@ -4,7 +4,6 @@ import { Provider as PaperProvider, MD3DarkTheme, MD3LightTheme } from 'react-na
 import { useColorScheme } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { setAudioModeAsync } from 'expo-audio';
-import * as WebBrowser from 'expo-web-browser';
 import { AppProvider } from './src/store/AppContext';
 import RootNavigator from './src/navigation';
 

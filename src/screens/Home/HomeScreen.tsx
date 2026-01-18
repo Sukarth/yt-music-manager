@@ -1,17 +1,6 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, FlatList, Alert } from 'react-native';
-import {
-  Text,
-  FAB,
-  Searchbar,
-  Menu,
-  IconButton,
-  Portal,
-  Dialog,
-  Button,
-  useTheme,
-  Chip,
-} from 'react-native-paper';
+import { Text, FAB, Searchbar, Portal, Dialog, Button, useTheme, Chip } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAppContext } from '../../store/AppContext';
@@ -97,8 +86,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   return (
     <SafeAreaView
       style={[styles.container, { backgroundColor: theme.colors.background }]}
-      edges={['top', 'left', 'right']}
-    >
+      edges={['top', 'left', 'right']}>
       <View style={styles.header}>
         <View style={styles.headerTop}>
           <Text variant="headlineMedium" style={styles.title}>
@@ -116,24 +104,21 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             selected={selectedFilter === 'all'}
             onPress={() => setSelectedFilter('all')}
             style={styles.filterChip}
-            showSelectedOverlay
-          >
+            showSelectedOverlay>
             All
           </Chip>
           <Chip
             selected={selectedFilter === 'synced'}
             onPress={() => setSelectedFilter('synced')}
             style={styles.filterChip}
-            showSelectedOverlay
-          >
+            showSelectedOverlay>
             Synced
           </Chip>
           <Chip
             selected={selectedFilter === 'not-synced'}
             onPress={() => setSelectedFilter('not-synced')}
             style={styles.filterChip}
-            showSelectedOverlay
-          >
+            showSelectedOverlay>
             Not Synced
           </Chip>
         </View>

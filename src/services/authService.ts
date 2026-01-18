@@ -1,15 +1,12 @@
-import {
-  GoogleSignin,
-  statusCodes,
-  User,
-} from '@react-native-google-signin/google-signin';
+import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 import { AuthState } from '../types';
 import { saveAuth, clearAuth } from '../utils/storage';
 
 // Web Client ID is required for offline access (refresh tokens) and ID tokens.
 // Even when using Android Native Auth, you should pass the WEB client ID here.
 // Create a "Web application" credential in Google Cloud Console to get this.
-const GOOGLE_WEB_CLIENT_ID = '16949272129-lbmkn1vads3bkh10185ah9gjr7rffm3c.apps.googleusercontent.com';
+const GOOGLE_WEB_CLIENT_ID =
+  '16949272129-lbmkn1vads3bkh10185ah9gjr7rffm3c.apps.googleusercontent.com';
 
 // Configure Google Sign-In once
 GoogleSignin.configure({
