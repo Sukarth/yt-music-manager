@@ -65,14 +65,29 @@ jobs:
       - name: Create google-services.json
         env:
           GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
-        run: echo "$GOOGLE_SERVICES_JSON" > google-services.json
+        run: |
+          # Use printf (not echo) to avoid newline/escape weirdness
+          printf '%s' "$GOOGLE_SERVICES_JSON" > google-services.json
+          test -s google-services.json
 
       - run: npx expo prebuild --platform android --clean
 
       - name: Restore keystore
         run: |
           mkdir -p android/app
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/release.keystore
+          # Use printf (not echo) to avoid newline/escape weirdness
+          printf '%s' "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/release.keystore
+          test -s android/app/release.keystore
+
+      - name: Print keystore certificate SHA-1
+        run: |
+          # Helps confirm the decoded keystore matches Firebase/Google OAuth config
+          keytool -list -v \
+            -keystore android/app/release.keystore \
+            -alias "${{ secrets.KEY_ALIAS }}" \
+            -storepass "${{ secrets.KEYSTORE_PASSWORD }}" \
+            -keypass "${{ secrets.KEY_PASSWORD }}" \
+            | grep -E "SHA1:|SHA-1:" || true
 
       - name: Configure signing
         run: |
@@ -87,6 +102,14 @@ jobs:
       - name: Build release APK
         working-directory: android
         run: ./gradlew assembleRelease --no-daemon
+
+      - name: Print APK signing certificate SHA-1
+        run: |
+          APK_PATH=$(ls -1 android/app/build/outputs/apk/release/*.apk | head -n 1)
+          echo "APK: $APK_PATH"
+          APKSIGNER=$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)
+          echo "apksigner: $APKSIGNER"
+          "$APKSIGNER" verify --print-certs "$APK_PATH" | grep -E "SHA-1|SHA1" || true
 
       - uses: actions/upload-artifact@v4
         with:
