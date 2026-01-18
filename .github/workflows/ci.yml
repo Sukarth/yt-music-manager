@@ -76,6 +76,7 @@ jobs:
 
       - name: Configure signing
         run: |
+          echo "" >> android/gradle.properties
           cat >> android/gradle.properties << EOF
           MYAPP_UPLOAD_STORE_FILE=release.keystore
           MYAPP_UPLOAD_KEY_ALIAS=${{ secrets.KEY_ALIAS }}
