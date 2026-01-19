@@ -29,16 +29,23 @@ function applySigningConfig(buildGradle) {
   // Insert release block inside signingConfigs
   buildGradle = buildGradle.replace(/signingConfigs\s*\{/, `signingConfigs {${releaseConfigBlock}`);
 
-  // 2. Set the signingConfig for release buildType
+  // 2. Set the signingConfig for release buildType - ALWAYS use release config when properties exist
+  // Match the release buildType block and replace any signingConfig line
   const releaseBuildTypeMatch =
-    /(buildTypes\s*\{[\s\S]*?release\s*\{[\s\S]*?)(signingConfig\s+signingConfigs\.debug)/;
+    /(buildTypes\s*\{[\s\S]*?release\s*\{[\s\S]*?)(signingConfig\s+signingConfigs\.[a-zA-Z]+)/;
 
   if (releaseBuildTypeMatch.test(buildGradle)) {
     buildGradle = buildGradle.replace(releaseBuildTypeMatch, (match, p1, p2) =>
       match.replace(
         p2,
-        `signingConfig project.hasProperty('MYAPP_UPLOAD_STORE_FILE') ? signingConfigs.release : signingConfigs.debug`
+        `signingConfig signingConfigs.release`
       )
+    );
+  } else {
+    // If no signingConfig line exists in release buildType, add it
+    buildGradle = buildGradle.replace(
+      /(buildTypes\s*\{[\s\S]*?release\s*\{)/,
+      `$1\n            signingConfig signingConfigs.release`
     );
   }
 

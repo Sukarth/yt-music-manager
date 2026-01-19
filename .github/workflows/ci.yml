@@ -99,6 +99,13 @@ jobs:
           MYAPP_UPLOAD_KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}
           EOF
 
+      - name: Debug build.gradle signing config
+        run: |
+          echo "=== signingConfigs ==="
+          grep -A 15 'signingConfigs {' android/app/build.gradle || true
+          echo "=== buildTypes.release ==="
+          grep -A 10 'release {' android/app/build.gradle | head -n 15 || true
+
       - name: Build release APK
         working-directory: android
         run: ./gradlew assembleRelease --no-daemon
