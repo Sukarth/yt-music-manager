@@ -102,10 +102,11 @@ jobs:
 
       - name: Debug build.gradle signing config
         run: |
-          echo "=== signingConfigs ==="
-          grep -A 15 'signingConfigs {' android/app/build.gradle || true
-          echo "=== buildTypes.release ==="
-          grep -A 10 'release {' android/app/build.gradle | head -n 15 || true
+          echo "=== android/app/build.gradle (Injected Configs) ==="
+          # Print the two blocks we care about
+          sed -n '/signingConfigs {/,/}/p' android/app/build.gradle | head -n 20
+          echo "---"
+          sed -n '/buildTypes {/,/}/p' android/app/build.gradle | head -n 30
 
       - name: Build release APK
         working-directory: android
