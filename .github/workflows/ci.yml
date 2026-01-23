@@ -79,16 +79,6 @@ jobs:
           printf '%s' "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/release.keystore
           test -s android/app/release.keystore
 
-      - name: Print keystore certificate SHA-1
-        run: |
-          # Helps confirm the decoded keystore matches Firebase/Google OAuth config
-          keytool -list -v \
-            -keystore android/app/release.keystore \
-            -alias "${{ secrets.KEY_ALIAS }}" \
-            -storepass "${{ secrets.KEYSTORE_PASSWORD }}" \
-            -keypass "${{ secrets.KEY_PASSWORD }}" \
-            | grep -E "SHA1:|SHA-1:" || true
-
       - name: Configure signing
         run: |
           echo "" >> android/gradle.properties
@@ -129,24 +119,9 @@ jobs:
             echo "apply from: \"./ci-signing.gradle\"" >> android/app/build.gradle
           fi
 
-      - name: Debug build.gradle signing config
-        run: |
-          echo "=== android/app/build.gradle (signing-related lines) ==="
-          grep -nE "apply from:|signingConfigs\s*\{|buildTypes\s*\{|signingConfig\s+signingConfigs\.|MYAPP_UPLOAD_" android/app/build.gradle || true
-          echo "=== android/app/ci-signing.gradle ==="
-          sed -n '1,120p' android/app/ci-signing.gradle || true
-
       - name: Build release APK
         working-directory: android
         run: ./gradlew assembleRelease --no-daemon
-
-      - name: Print APK signing certificate SHA-1
-        run: |
-          APK_PATH=$(ls -1 android/app/build/outputs/apk/release/*.apk | head -n 1)
-          echo "APK: $APK_PATH"
-          APKSIGNER=$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)
-          echo "apksigner: $APKSIGNER"
-          "$APKSIGNER" verify --print-certs "$APK_PATH" | grep -E "SHA-1|SHA1" || true
 
       - uses: actions/upload-artifact@v4
         with:
