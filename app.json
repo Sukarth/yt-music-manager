@@ -56,7 +56,6 @@
       "expo-file-system",
       "expo-document-picker",
       "expo-secure-store",
-      "./plugins/withAndroidSigning",
       [
         "expo-build-properties",
         {

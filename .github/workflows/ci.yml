@@ -100,13 +100,41 @@ jobs:
           MYAPP_UPLOAD_KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}
           EOF
 
+      - name: Inject CI signing into Gradle
+        run: |
+          cat > android/app/ci-signing.gradle << 'EOF'
+          android {
+            signingConfigs {
+              release {
+                if (project.hasProperty('MYAPP_UPLOAD_STORE_FILE')) {
+                  storeFile file(MYAPP_UPLOAD_STORE_FILE)
+                  storePassword MYAPP_UPLOAD_STORE_PASSWORD
+                  keyAlias MYAPP_UPLOAD_KEY_ALIAS
+                  keyPassword MYAPP_UPLOAD_KEY_PASSWORD
+                }
+              }
+            }
+
+            buildTypes {
+              release {
+                signingConfig signingConfigs.release
+              }
+            }
+          }
+          EOF
+
+          # Ensure android/app/build.gradle applies the CI signing script
+          if ! grep -q "apply from: \"./ci-signing.gradle\"" android/app/build.gradle; then
+            echo "" >> android/app/build.gradle
+            echo "apply from: \"./ci-signing.gradle\"" >> android/app/build.gradle
+          fi
+
       - name: Debug build.gradle signing config
         run: |
-          echo "=== android/app/build.gradle (Injected Configs) ==="
-          # Print the two blocks we care about
-          sed -n '/signingConfigs {/,/}/p' android/app/build.gradle | head -n 20
-          echo "---"
-          sed -n '/buildTypes {/,/}/p' android/app/build.gradle | head -n 30
+          echo "=== android/app/build.gradle (signing-related lines) ==="
+          grep -nE "apply from:|signingConfigs\s*\{|buildTypes\s*\{|signingConfig\s+signingConfigs\.|MYAPP_UPLOAD_" android/app/build.gradle || true
+          echo "=== android/app/ci-signing.gradle ==="
+          sed -n '1,120p' android/app/ci-signing.gradle || true
 
       - name: Build release APK
         working-directory: android
